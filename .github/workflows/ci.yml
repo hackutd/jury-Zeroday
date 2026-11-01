@@ -1,0 +1,103 @@
+# Shared checks, called by staging.yml and promote.yml (can also be run manually)
+name: Checks
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Install Go (version from go.mod)
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      # Compile all packages
+      - name: Build
+        run: go build ./...
+
+      # Static checks (composites disabled: unkeyed bson.D{{"k", v}} is idiomatic Mongo)
+      - name: Vet
+        run: go vet -composites=false ./...
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Install Node (18 = lts-hydrogen, same as Dockerfile)
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+          cache-dependency-path: client/yarn.lock
+
+      # Install dependencies
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # TODO: add `yarn lint` once eslint is added to devDependencies (only the plugin is installed),
+      # and `npx tsc --noEmit` once the existing type errors are fixed (vite build does not type-check)
+
+      # Production build
+      - name: Build
+        run: yarn build
+        env:
+          VITE_JURY_NAME: CI
+          VITE_JURY_URL: /api
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Build the production image (same Dockerfile DigitalOcean uses); not pushed anywhere
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg VITE_JURY_NAME=CI \
+            --build-arg VITE_JURY_URL=/api \
+            -t jury-ci .
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Spin up mongo + backend + test runner (docker-compose.test.yml) and check results
+      - name: Run integration tests
+        run: |
+          cat > .env <<EOF
+          JURY_ADMIN_PASSWORD=admin
+          EMAIL_FROM=test@example.com
+          EMAIL_HOST=smtp.example.com
+          EMAIL_USERNAME=test
+          EMAIL_PASSWORD=test
+          EOF
+          ./scripts/test-runner.sh

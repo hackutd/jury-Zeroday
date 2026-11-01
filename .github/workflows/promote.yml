@@ -1,0 +1,52 @@
+# Runs on PRs into master (production). Only staging may be promoted.
+name: Promote to Production
+
+on:
+  pull_request:
+    branches:
+      - master
+    # "edited" re-runs the guard if a PR's base is changed to master
+    types: [opened, synchronize, reopened, edited]
+
+# Cancel older runs on the same PR when new commits are pushed
+concurrency:
+  group: promote-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-branch:
+    name: source-branch
+    runs-on: ubuntu-latest
+    steps:
+      # Block PRs into master from any branch other than staging
+      - name: Only staging may merge into master
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [ "$HEAD_REF" != "staging" ] || [ "$HEAD_REPO" != "${{ github.repository }}" ]; then
+            echo "::error::PRs into master must come from this repo's 'staging' branch (got '$HEAD_REPO:$HEAD_REF')."
+            exit 1
+          fi
+
+  checks:
+    name: checks
+    needs: source-branch
+    uses: ./.github/workflows/ci.yml
+
+  staging-health:
+    name: staging-health
+    needs: source-branch
+    runs-on: ubuntu-latest
+    steps:
+      # Make sure the staging app is up before promoting (set repo variable STAGING_URL, e.g. https://jury-staging-xxxx.ondigitalocean.app)
+      - name: Ping staging app
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+        run: |
+          if [ -z "$STAGING_URL" ]; then
+            echo "::warning::STAGING_URL repo variable not set; skipping staging health check."
+            exit 0
+          fi
+          curl -fsS --retry 5 --retry-delay 10 --retry-all-errors "${STAGING_URL%/}/api/" | grep -q '"ok":1'
+          echo "Staging is up"
