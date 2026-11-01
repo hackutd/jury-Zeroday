@@ -11,6 +11,7 @@ import (
 	"server/database"
 	"server/models"
 	"server/util"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -148,24 +149,79 @@ func ParseProjectCsv(content string, hasHeader bool, db *mongo.Database) ([]*mod
 	return projects, nil
 }
 
-// TODO: After event, devpost will add a column between 0 and 1, the "auto assigned table numbers" TT - idk what to do abt this
+// Column positions in the Devpost project export (2025 format)
+const (
+	devpostColTitle       = 0
+	devpostColUrl         = 1
+	devpostColStatus      = 2
+	devpostColDescription = 8
+	devpostColTryLink     = 9
+	devpostColVideoLink   = 10
+	devpostColChallenges  = 13
+)
+
+// Expected (normalized) header names at the columns we read, used to detect format changes
+var devpostExpectedHeaders = map[int]string{
+	devpostColTitle:       "project title",
+	devpostColUrl:         "submission url",
+	devpostColStatus:      "project status",
+	devpostColDescription: "about the project",
+	devpostColTryLink:     "try it out links",
+	devpostColVideoLink:   "video demo link",
+	devpostColChallenges:  "opt-in prizes",
+}
+
+// normalizeDevpostHeader lowercases a header and strips the BOM, quotes, and surrounding whitespace
+func normalizeDevpostHeader(h string) string {
+	h = strings.TrimPrefix(h, "\xef\xbb\xbf")
+	h = strings.ReplaceAll(h, "\"", "")
+	return strings.ToLower(strings.TrimSpace(h))
+}
+
+// checkDevpostHeader verifies the header row matches the column positions we read,
+// so a change in Devpost's export format fails loudly instead of importing garbage
+func checkDevpostHeader(header []string) error {
+	for col, expected := range devpostExpectedHeaders {
+		if col >= len(header) {
+			return fmt.Errorf("devpost csv header has %d columns, expected '%s' at column %d", len(header), expected, col)
+		}
+		if got := normalizeDevpostHeader(header[col]); got != expected {
+			return fmt.Errorf("devpost csv column %d is '%s', expected '%s' (devpost export format may have changed)", col, header[col], expected)
+		}
+	}
+	return nil
+}
+
+// parseDevpostChallenges splits the Opt-In Prizes cell into a list, trimming entries and dropping empty ones
+func parseDevpostChallenges(cell string) []string {
+	challengeList := []string{}
+	for _, challenge := range strings.Split(cell, ",") {
+		challenge = strings.TrimSpace(challenge)
+		if challenge != "" {
+			challengeList = append(challengeList, challenge)
+		}
+	}
+	return challengeList
+}
+
 // Generate a workable CSV for Jury based on the output CSV from Devpost
-// Columns:
+// Columns (by position, verified against the header row):
 //  0. Project Title - title
 //  1. Submission Url - url
 //  2. Project Status - Draft or Submitted (ignore drafts)
 //  3. Judging Status - ignore
 //  4. Highest Step Completed - ignore
 //  5. Project Created At - ignore
-//  6. About The Project - description
-//  7. "Try it out" Links" - try_link
-//  8. Video Demo Link - video_link
-//  9. Opt-In Prizes - challenge_list
-//  10. Built With - ignore
-//  11. Notes - ignore
-//  12. Team Colleges/Universities - ignore
-//  13. Additional Team Member Count - ignore
-//  14. (and remiaining rows) Custom questions - custom_questions (ignore for now)
+//  6. Project Submitted At - ignore
+//  7. Submission Last Submitted At - ignore
+//  8. About The Project - description
+//  9. "Try it out" Links - try_link
+//  10. Video Demo Link - video_link
+//  11. Image Gallery URLs - ignore
+//  12. Attached File S3 Key - ignore
+//  13. Opt-In Prizes - challenge_list
+//  14. Built With - ignore
+//  15. (and remaining columns) Notes, team info, and custom questions - ignore
 func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, error) {
 	r := csv.NewReader(strings.NewReader(content))
 
@@ -174,8 +230,14 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 		return []*models.Project{}, nil
 	}
 
-	// Skip the first line
-	r.Read()
+	// Read and validate the header row
+	header, err := r.Read()
+	if err != nil {
+		return nil, fmt.Errorf("could not read devpost csv header: %s", err.Error())
+	}
+	if err := checkDevpostHeader(header); err != nil {
+		return nil, err
+	}
 
 	// Get the starting table number
 	tableNum, err := database.GetMaxTableNum(db, context.Background())
@@ -201,23 +263,17 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 		}
 
 		// Make sure the record has 14 or more elements (see above)
-		if len(record) < 13 {
-			return nil, fmt.Errorf("record does not contain 14 or more elements (invalid devpost csv): '%s'", strings.Join(record, ","))
+		if len(record) <= devpostColChallenges {
+			return nil, fmt.Errorf("record does not contain %d or more elements (invalid devpost csv): '%s'", devpostColChallenges+1, record[devpostColTitle])
 		}
 
 		// If the project is a Draft, skip it
-		if record[2] == "Draft" {
+		if record[devpostColStatus] == "Draft" {
 			continue
 		}
 
 		// Split challenge list into a slice and trim them
-		challengeList := strings.Split(record[9], ",")
-		if record[9] == "" {
-			challengeList = []string{}
-		}
-		for i := range challengeList {
-			challengeList[i] = strings.TrimSpace(challengeList[i])
-		}
+		challengeList := parseDevpostChallenges(record[devpostColChallenges])
 
 		// If the challenge list contains the ignore track, skip the project
 		ignore := false
@@ -236,13 +292,13 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 
 		// Add project to slice
 		projects = append(projects, models.NewProject(
-			record[0],
+			record[devpostColTitle],
 			tableNum,
 			util.GroupFromTable(options, tableNum),
-			record[6],
-			record[1],
-			record[7],
-			record[8],
+			record[devpostColDescription],
+			record[devpostColUrl],
+			record[devpostColTryLink],
+			record[devpostColVideoLink],
 			challengeList,
 		))
 	}
@@ -359,6 +415,33 @@ func CreateProjectCSV(projects []*models.Project) []byte {
 	return csvBuffer.Bytes()
 }
 
+// CreateChallengeProjectCSV creates a printable CSV of projects for a single challenge,
+// with only table, name, and project links (sized to print on A4 landscape), sorted by table number
+func CreateChallengeProjectCSV(projects []*models.Project) []byte {
+	csvBuffer := &bytes.Buffer{}
+
+	// Create a new CSV writer
+	w := csv.NewWriter(csvBuffer)
+
+	// Write the header
+	w.Write([]string{"Table", "Name", "Devpost", "Try It Out"})
+
+	// Sort a copy of the projects by table number
+	sorted := make([]*models.Project, len(projects))
+	copy(sorted, projects)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Location < sorted[j].Location })
+
+	// Write each project
+	for _, project := range sorted {
+		w.Write([]string{fmt.Sprintf("%d", project.Location), project.Name, project.Url, project.TryLink})
+	}
+
+	// Flush the writer
+	w.Flush()
+
+	return csvBuffer.Bytes()
+}
+
 // CreateProjectChallengeZip creates a zip file with a CSV for each challenge
 func CreateProjectChallengeZip(projects []*models.Project) ([]byte, error) {
 	csvList := [][]byte{}
@@ -383,7 +466,7 @@ func CreateProjectChallengeZip(projects []*models.Project) ([]byte, error) {
 		}
 
 		// Create CSV for the challenge
-		csv := CreateProjectCSV(currChallengeProjects)
+		csv := CreateChallengeProjectCSV(currChallengeProjects)
 		csvList = append(csvList, csv)
 	}
 
