@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"regexp"
 	"server/models"
 	"strings"
 	"time"
@@ -122,4 +123,10 @@ func StructToStringWithoutNils(s interface{}) string {
 	sb.WriteString("}")
 
 	return sb.String()
+}
+
+// ExactFoldRegex returns a mongo regex that matches s exactly, ignoring case.
+// Used to match track names against a project's challenge list.
+func ExactFoldRegex(s string) primitive.Regex {
+	return primitive.Regex{Pattern: "^" + regexp.QuoteMeta(s) + "$", Options: "i"}
 }

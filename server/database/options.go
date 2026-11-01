@@ -75,6 +75,9 @@ func UpdateOptions(db *mongo.Database, ctx context.Context, options *models.Opti
 	if options.BlockReqs != nil {
 		update["block_reqs"] = *options.BlockReqs
 	}
+	if options.DisableGeneralJudging != nil {
+		update["disable_general_judging"] = *options.DisableGeneralJudging
+	}
 
 	_, err := db.Collection("options").UpdateOne(ctx, gin.H{}, gin.H{"$set": update})
 	return err

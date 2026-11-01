@@ -155,7 +155,7 @@ const JudgeLive = () => {
 
         // No project has been returned (all projects have been judged)
         if (!newProject.data?.project_id) {
-            setInfoPage(judge?.track === '' ? 'done' : 'doneTrack');
+            setInfoPage(theJudge.track === '' ? 'done' : 'doneTrack');
             return;
         }
 

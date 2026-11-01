@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"server/models"
+	"server/util"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,7 +21,7 @@ func AggregateStats(db *mongo.Database, track string) (*models.Stats, error) {
 	// Get the average project seen using an aggregation pipeline
 	matchObj := gin.H{"active": true}
 	if track != "" {
-		matchObj["challenge_list"] = track
+		matchObj["challenge_list"] = util.ExactFoldRegex(track)
 	}
 	projCursor, err := db.Collection("projects").Aggregate(context.Background(), []gin.H{
 		{"$match": matchObj},

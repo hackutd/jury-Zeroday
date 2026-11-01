@@ -80,8 +80,10 @@ const ProjectsTable = () => {
         // Filter by track if enabled
         const filteredProjects =
             options.judge_tracks && selectedTrack !== ''
-                ? unsortedProjects.filter(
-                      (project) => project.challenge_list.indexOf(selectedTrack) !== -1
+                ? unsortedProjects.filter((project) =>
+                      project.challenge_list.some(
+                          (c) => c.toLowerCase() === selectedTrack.toLowerCase()
+                      )
                   )
                 : unsortedProjects;
 
@@ -110,7 +112,14 @@ const ProjectsTable = () => {
                 sortFunc = (a, b) => (a.group - b.group) * asc;
                 break;
             case ProjectSortField.Score:
-                sortFunc = (a, b) => (a.score - b.score) * asc;
+                sortFunc = (a, b) => {
+                    if (options.judge_tracks && selectedTrack !== '') {
+                        const ats = a.track_scores?.[selectedTrack] ?? 0;
+                        const bts = b.track_scores?.[selectedTrack] ?? 0;
+                        return (ats - bts) * asc;
+                    }
+                    return (a.score - b.score) * asc;
+                };
                 break;
             case ProjectSortField.Stars:
                 sortFunc = (a, b) => {
@@ -170,14 +179,12 @@ const ProjectsTable = () => {
                         sortState={sortState}
                     />
                 )}
-                {selectedTrack === '' && (
-                    <HeaderEntry
-                        name="Score"
-                        updateSort={updateSort}
-                        sortField={ProjectSortField.Score}
-                        sortState={sortState}
-                    />
-                )}
+                <HeaderEntry
+                    name="Score"
+                    updateSort={updateSort}
+                    sortField={ProjectSortField.Score}
+                    sortState={sortState}
+                />
                 <HeaderEntry
                     name="Stars"
                     updateSort={updateSort}

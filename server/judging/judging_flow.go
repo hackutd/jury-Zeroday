@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -149,13 +150,25 @@ func MoveJudgeGroup(db *mongo.Database, ctx context.Context, judge *models.Judge
 
 // PickNextProject - Picks the next project for the judge to judge.
 // To do this:
-//  1. Get all available projects
-//  2. If judging a track, simply pick the next project in order
-//  3. If any project is prioritized and on the list, return that
-//  4. Shuffle projects
-//  5. If any projects seen less than min views (set in admin side), only select from that list
-//  6. Otherwise, pick the project with the minimum number of comparisons with every other project
+//  1. If the judge is a general judge and general judging is disabled, return no project
+//  2. Get all available projects
+//  3. If judging a track, pick using PickNextTrackProject
+//  4. If any project is prioritized and on the list, return that
+//  5. Shuffle projects
+//  6. If any projects seen less than min views (set in admin side), only select from that list
+//  7. Otherwise, pick the project with the minimum number of comparisons with every other project
 func PickNextProject(db *mongo.Database, ctx context.Context, judge *models.Judge, comps *Comparisons) (*models.Project, error) {
+	// Get options from the db
+	options, err := database.GetOptions(db, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// General judges don't get projects if general judging is disabled
+	if judge.Track == "" && !options.GeneralJudgingEnabled() {
+		return nil, nil
+	}
+
 	// Get items
 	items, err := FindAvailableItems(db, ctx, judge)
 	if err != nil {
@@ -172,30 +185,18 @@ func PickNextProject(db *mongo.Database, ctx context.Context, judge *models.Judg
 		return items[0], nil
 	}
 
-	// Get options from the db
-	options, err := database.GetOptions(db, ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// If judging a track, simply pick the next project
-	if judge.Track != "" {
-		return GetNextFreeProject(judge.LastLocation, items)
-	}
-
-	// Get prioritized projects
-	prioritizedProjects, err := database.GetPrioritizedProjects(db, ctx)
-	if err != nil {
-		return nil, err
+	// If judging a track, use the track's own comparisons
+	if options.JudgeTracks && judge.Track != "" {
+		return PickNextTrackProject(db, ctx, judge, items)
 	}
 
 	// If any prioritized projects are in the list, return the first one
-	for _, proj := range prioritizedProjects {
-		if slices.ContainsFunc(items, func(p *models.Project) bool {
-			return p.Id == proj.Id
-		}) {
-			return proj, nil
-		}
+	prioritized, err := findPrioritizedProject(db, ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	if prioritized != nil {
+		return prioritized, nil
 	}
 
 	// Shuffle items
@@ -219,12 +220,103 @@ func PickNextProject(db *mongo.Database, ctx context.Context, judge *models.Judg
 	return comps.FindLeastCompared(items, judge.SeenProjects), nil
 }
 
+// PickNextTrackProject - Picks the next project for a track judge. This uses the same comparison-based
+// approach as general judging, but only considers the judge's track.
+// Items should be the output of FindAvailableItems (only projects in the judge's track).
+// To do this:
+//  1. If any project is prioritized and on the list, return that
+//  2. Only keep the projects with the least number of views from this track's judges
+//  3. Build a comparison matrix from only this track's judges, and keep the least compared projects
+//  4. Out of those, pick the next project by table number after the judge's last location
+//     (so judges stay close to where they are)
+func PickNextTrackProject(db *mongo.Database, ctx context.Context, judge *models.Judge, items []*models.Project) (*models.Project, error) {
+	// If any prioritized projects are in the list, return the first one
+	prioritized, err := findPrioritizedProject(db, ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	if prioritized != nil {
+		return prioritized, nil
+	}
+
+	// Only keep the projects with the least number of track views
+	minSeen := items[0].TrackSeen[judge.Track]
+	for _, proj := range items {
+		if proj.TrackSeen[judge.Track] < minSeen {
+			minSeen = proj.TrackSeen[judge.Track]
+		}
+	}
+	var minViewItems []*models.Project
+	for _, proj := range items {
+		if proj.TrackSeen[judge.Track] == minSeen {
+			minViewItems = append(minViewItems, proj)
+		}
+	}
+
+	// Build the comparisons from only this track's judges
+	// All projects are used so every project a track judge has seen is in the matrix
+	projects, err := database.FindAllProjects(db, ctx)
+	if err != nil {
+		return nil, err
+	}
+	trackJudges, err := database.FindJudgesByTrack(db, ctx, judge.Track)
+	if err != nil {
+		return nil, err
+	}
+	trackComps := CreateComparisons(projects, withExistingSeenProjects(trackJudges, projects))
+
+	// Keep the least compared projects and pick the next one by table number
+	prevSeen := withExistingSeenProjects([]*models.Judge{judge}, projects)[0].SeenProjects
+	leastCompared := trackComps.FindLeastComparedAll(minViewItems, prevSeen)
+	return GetNextFreeProject(judge.LastLocation, leastCompared)
+}
+
+// withExistingSeenProjects returns copies of the judges with seen projects that no longer exist
+// (eg. deleted projects) removed, so they are not miscounted in the comparisons matrix
+func withExistingSeenProjects(judges []*models.Judge, projects []*models.Project) []*models.Judge {
+	exists := make(map[primitive.ObjectID]bool, len(projects))
+	for _, p := range projects {
+		exists[p.Id] = true
+	}
+
+	out := make([]*models.Judge, 0, len(judges))
+	for _, j := range judges {
+		copied := *j
+		copied.SeenProjects = make([]models.JudgedProject, 0, len(j.SeenProjects))
+		for _, seen := range j.SeenProjects {
+			if exists[seen.ProjectId] {
+				copied.SeenProjects = append(copied.SeenProjects, seen)
+			}
+		}
+		out = append(out, &copied)
+	}
+	return out
+}
+
+// findPrioritizedProject returns the first prioritized project that is in the list of items,
+// or nil if none of the items are prioritized
+func findPrioritizedProject(db *mongo.Database, ctx context.Context, items []*models.Project) (*models.Project, error) {
+	prioritizedProjects, err := database.GetPrioritizedProjects(db, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, proj := range prioritizedProjects {
+		if slices.ContainsFunc(items, func(p *models.Project) bool {
+			return p.Id == proj.Id
+		}) {
+			return proj, nil
+		}
+	}
+	return nil, nil
+}
+
 // FindAvailableItems - List of projects to pick from for the judge.
 // Find all projects that are higher priority with the following heuristic:
 //  1. Ignore all projects that are inactive
 //  2. Filter out all projects that the judge has already seen
 //  3. Filter out all projects that the judge has flagged (except for busy projects)
-//  4. Filter out all projects that is not in the judge's track (if tracks are enabled and the user has a track)
+//  4. Filter out all projects that is not in the judge's track, ignoring case (if tracks are enabled and the user has a track)
 //  5. If tracks are enabled, filter out all track projects that have been seen >track_views[track] times
 //  6. Filter out projects that are currently being judged (if no projects remain after filter, ignore step)
 //  7. If judging a track, return at this point (ignore last 2 conditions)
@@ -284,10 +376,15 @@ func FindAvailableItems(db *mongo.Database, ctx context.Context, judge *models.J
 	// Filter out all projects that are not in the judge's track
 	// Also filter out all track projects that have been seen >2 times OR is currently being judged by a track judge
 	if options.JudgeTracks && judge.Track != "" {
+		// If the judge's track is no longer judged, there are no projects for them
+		trackIndex := util.IndexFold(options.Tracks, judge.Track)
+		if trackIndex == -1 || trackIndex >= len(options.TrackViews) {
+			return []*models.Project{}, nil
+		}
+
 		var trackProjects []*models.Project
-		trackIndex := slices.Index(options.Tracks, judge.Track)
 		for _, proj := range projects {
-			if slices.Contains(proj.ChallengeList, judge.Track) {
+			if util.ContainsFold(proj.ChallengeList, judge.Track) {
 				// If currently being judged by the last track judge, do not assign
 				if proj.TrackSeen[judge.Track] == options.TrackViews[trackIndex]-1 && busyProjects[proj.Id] == judge.Track {
 					continue

@@ -466,6 +466,10 @@ get list of all projects
             "track1": "int",
             "track2": "int"
         },
+        "track_scores": {
+            "track1": "int",
+            "track2": "int"
+        },
         "active": "bool",
         "prioritized": "bool",
         "group": "int",
@@ -719,7 +723,8 @@ Gets all config options set
     "group_names": ["String"],
     "ignore_tracks": ["String"],
     "max_req_per_min": "int",
-    "block_reqs": "bool"
+    "block_reqs": "bool",
+    "disable_general_judging": "bool"
 }
 ```
 
@@ -736,6 +741,7 @@ Sets config options
     "min_views": "int",
     "clock_sync": "bool",
     "judge_tracks": "bool",
+    "disable_general_judging": "bool",
     "tracks": ["String"],
     "multi_group": "bool",
     "num_groups": "int",

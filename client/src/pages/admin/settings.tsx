@@ -83,6 +83,7 @@ const AdminSettings = () => {
     const [autoSwitchProp, setAutoSwitchProp] = useState(0.1);
     const [groupSizes, setGroupSizes] = useState('30, 30');
     const [judgeTracks, setJudgeTracks] = useState(false);
+    const [keepGeneral, setKeepGeneral] = useState(true);
     const [tracks, setTracks] = useState<string>('');
     const [trackViews, setTrackViews] = useState('');
     const [groupNames, setGroupNames] = useState('');
@@ -98,7 +99,6 @@ const AdminSettings = () => {
     const fetchOptions = useOptionsStore((state) => state.fetchOptions);
     const options = useOptionsStore((state) => state.options);
     const fetchClock = useClockStore((state) => state.fetchClock);
-    const clock = useClockStore((state) => state.clock);
     const navigate = useNavigate();
 
     async function getOptions() {
@@ -126,6 +126,7 @@ const AdminSettings = () => {
         setSwitchingMode(newOptions.switching_mode);
         setAutoSwitchProp(newOptions.auto_switch_prop);
         setJudgeTracks(newOptions.judge_tracks);
+        setKeepGeneral(!newOptions.disable_general_judging);
         setTracks(newOptions.tracks.join(', '));
         setTrackViews(newOptions.track_views.join(', '));
         setGroupNames(newOptions.group_names.join(', '));
@@ -134,8 +135,9 @@ const AdminSettings = () => {
         setMaxReqPerMin(newOptions.max_req_per_min);
 
         // Get active clock status
+        // Read the clock from the store after fetching (the clock variable here is stale)
         await fetchClock();
-        setRunning(clock.running);
+        setRunning(useClockStore.getState().clock.running);
 
         setLoading(false);
     }
@@ -268,7 +270,22 @@ const AdminSettings = () => {
         }
 
         setJudgeTracks(!judgeTracks);
+        fetchOptions();
         alert('Track judging toggled!');
+    };
+
+    const toggleKeepGeneral = async () => {
+        const res = await postRequest<OkResponse>('/admin/options', 'admin', {
+            disable_general_judging: keepGeneral,
+        });
+        if (res.status !== 200 || res.data?.ok !== 1) {
+            errorAlert(res);
+            return;
+        }
+
+        setKeepGeneral(!keepGeneral);
+        fetchOptions();
+        alert('General judging toggled!');
     };
 
     const updateTracks = async () => {
@@ -737,10 +754,10 @@ const AdminSettings = () => {
                     <Description>
                         Enable judging for individual tracks. This allows judges to be assigned to a
                         specific track and ONLY judge projects that have submitted to that track.
-                        This does not affect the main general judging, and all projects will still
-                        be considered for the main judging. However, if you have a different track
-                        (eg. design), this feature will allow that track's judges to only see
-                        projects that have submitted to that track.
+                        Track judges rank projects the same way as general judges, but each track
+                        is scored separately using only that track's judges. Track judges do not
+                        affect the general scores. While this is off, judges cannot be added with a
+                        track, and any existing track judges will not count toward general scores.
                     </Description>
                     <Checkbox checked={judgeTracks} onChange={toggleJudgeTracks} disabled={running}>
                         Enable Track Judging
@@ -748,6 +765,21 @@ const AdminSettings = () => {
 
                     {judgeTracks && (
                         <>
+                            <SubSection>Keep General Judging</SubSection>
+                            <Description>
+                                Keep general judging running alongside track judging. All projects
+                                are still considered for general judging. Uncheck this to only run
+                                track judging; general judges will not be given any projects and
+                                new judges must be assigned a track.
+                            </Description>
+                            <Checkbox
+                                checked={keepGeneral}
+                                onChange={toggleKeepGeneral}
+                                disabled={running}
+                            >
+                                Keep General Judging
+                            </Checkbox>
+
                             <SubSection>Set Tracks</SubSection>
                             <Description>
                                 Set the tracks that will be judged. Note this should match the name

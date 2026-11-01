@@ -179,6 +179,32 @@ func (c *Comparisons) FindLeastCompared(projects []*models.Project, prevSeen []m
 	return minProj
 }
 
+// FindLeastComparedAll is the same as FindLeastCompared, but returns ALL projects that are
+// tied for the least number of comparisons. Projects param MUST not be empty.
+func (c *Comparisons) FindLeastComparedAll(projects []*models.Project, prevSeen []models.JudgedProject) []*models.Project {
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
+
+	min := 0x7FFFFFFF
+	var minProjs []*models.Project
+	for _, v := range projects {
+		curr := 0
+		vId := c.IdNumMap[v.Id]
+		for _, p := range prevSeen {
+			pId := c.IdNumMap[p.ProjectId]
+			curr += c.Arr[vId][pId]
+		}
+		if curr < min {
+			min = curr
+			minProjs = []*models.Project{v}
+		} else if curr == min {
+			minProjs = append(minProjs, v)
+		}
+	}
+
+	return minProjs
+}
+
 // ReloadComparisons will reload the comparisons from the database
 func ReloadComparisons(db *mongo.Database, ctx context.Context, comparisons *Comparisons) error {
 	new_comps, err := LoadComparisonsWithTx(db, ctx)

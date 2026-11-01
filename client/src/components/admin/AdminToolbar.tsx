@@ -38,10 +38,20 @@ const AdminToolbar = (props: { showProjects: boolean; lastUpdate: Date }) => {
         });
     };
 
+    // General judging can only be turned off when track judging is on
+    const generalJudging = !options.judge_tracks || !options.disable_general_judging;
+
     // Fetch stats when track changes
     useEffect(() => {
         fetchStats();
     }, [selectedTrack]);
+
+    // If general judging is off, there is no general view, so show the first track instead
+    useEffect(() => {
+        if (!generalJudging && selectedTrack === '' && options.tracks.length > 0) {
+            setSelectedTrack(options.tracks[0]);
+        }
+    }, [generalJudging, selectedTrack, options.tracks]);
 
     // When selected changes, update selectedIdxs
     useEffect(() => {
@@ -136,8 +146,10 @@ const AdminToolbar = (props: { showProjects: boolean; lastUpdate: Date }) => {
                     </div>
                     {options && options.judge_tracks && (
                         <Dropdown
-                            options={['Main Judging', ...options.tracks]}
-                            selected={selectedTrack === '' ? 'Main Judging' : selectedTrack}
+                            options={
+                                generalJudging ? ['General', ...options.tracks] : options.tracks
+                            }
+                            selected={selectedTrack === '' ? 'General' : selectedTrack}
                             setSelected={setSelectedTrack}
                             large
                             className="text-center text-md md:text-xl h-12"

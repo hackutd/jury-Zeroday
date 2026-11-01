@@ -97,6 +97,15 @@ func RunTests(context *util.Context) {
 				"Block Reqs Toggle":                   BlockReqsToggle,
 			},
 		},
+		{
+			Name:  "Track Judging",
+			Setup: TrackTestSetup,
+			Tests: map[string]func(*util.Context) util.Result{
+				"Track Judges Rank And Get Track Scores":        TrackJudgesRankAndGetTrackScores,
+				"General Judging Disabled Blocks General Judges": GeneralJudgingDisabledBlocksGeneralJudges,
+				"Track Judging Disabled Rejects Tracks":          TrackJudgingDisabledRejectsTracks,
+			},
+		},
 	}
 
 	totalErrors := 0

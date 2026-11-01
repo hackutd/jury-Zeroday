@@ -25,6 +25,9 @@ type Options struct {
 	IgnoreTracks   []string           `bson:"ignore_tracks" json:"ignore_tracks"`       // Ignore all projects that are added with this track
 	MaxReqPerMin   int64              `bson:"max_req_per_min" json:"max_req_per_min"`   // Maximum number of requests per minute
 	BlockReqs      bool               `bson:"block_reqs" json:"block_reqs"`             // Whether or not to block login requests
+	// Turns off general judging when track judging is on (tracks only). Stored inverted so that
+	// existing options documents without this field keep general judging enabled
+	DisableGeneralJudging bool `bson:"disable_general_judging" json:"disable_general_judging"`
 }
 
 func NewOptions() *Options {
@@ -50,7 +53,15 @@ func NewOptions() *Options {
 		IgnoreTracks:   []string{},
 		MaxReqPerMin:   100,
 		BlockReqs:      false,
+
+		DisableGeneralJudging: false,
 	}
+}
+
+// GeneralJudgingEnabled returns true if general judges should be judging.
+// General judging can only be turned off when track judging is enabled.
+func (o *Options) GeneralJudgingEnabled() bool {
+	return !o.JudgeTracks || !o.DisableGeneralJudging
 }
 
 type OptionalOptions struct {
@@ -70,4 +81,6 @@ type OptionalOptions struct {
 	IgnoreTracks   *[]string `bson:"ignore_tracks,omitempty" json:"ignore_tracks,omitempty"`
 	MaxReqPerMin   *int64    `bson:"max_req_per_min,omitempty" json:"max_req_per_min,omitempty"`
 	BlockReqs      *bool     `bson:"block_reqs,omitempty" json:"block_reqs,omitempty"`
+
+	DisableGeneralJudging *bool `bson:"disable_general_judging,omitempty" json:"disable_general_judging,omitempty"`
 }

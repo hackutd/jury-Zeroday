@@ -34,6 +34,8 @@ const Checkbox = (props: CheckboxProps) => {
                 onChange={(e) => {
                     props.disabled || props.onChange(e.target.checked);
                 }}
+                // Don't let the click bubble up to the div, or onChange runs twice
+                onClick={(e) => e.stopPropagation()}
                 className={twMerge(
                     'mr-4 rounded-sm bg-white border-primary border-2 text-primary focus:ring-0',
                     props.disabled && 'text-lighter border-lighter'

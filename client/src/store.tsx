@@ -26,7 +26,10 @@ const useAdminStore = create<AdminStore>()((set) => ({
     fetchStats: async () => {
         const selectedTrack = useOptionsStore.getState().selectedTrack;
         const slash = selectedTrack === '' ? '' : '/';
-        const statsRes = await getRequest<Stats>(`/admin/stats${slash}${selectedTrack}`, 'admin');
+        const statsRes = await getRequest<Stats>(
+            `/admin/stats${slash}${encodeURIComponent(selectedTrack)}`,
+            'admin'
+        );
         if (statsRes.status !== 200) {
             errorAlert(statsRes);
             return;
@@ -150,6 +153,7 @@ const useOptionsStore = create<OptionsStore>((set) => ({
         ignore_tracks: [],
         block_reqs: false,
         max_req_per_min: 0,
+        disable_general_judging: false,
     },
 
     selectedTrack: '',
@@ -166,8 +170,8 @@ const useOptionsStore = create<OptionsStore>((set) => ({
     },
 
     setSelectedTrack: async (track: string) => {
-        // If main judging selected, reset selected track
-        if (track === 'Main Judging') {
+        // If general judging selected, reset selected track
+        if (track === 'General') {
             set({ selectedTrack: '' });
             return;
         }

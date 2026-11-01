@@ -663,6 +663,12 @@ func CheckTrackQRCode(ctx *gin.Context) {
 		return
 	}
 
+	// Reject track QR codes if track judging is off
+	if !options.JudgeTracks {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "track judging is disabled, please scan the general judging QR code or ask an organizer"})
+		return
+	}
+
 	// Send OK or reject empty values
 	expected := options.TrackQRCodes[track]
 	if qrReq.Code != "" && expected != "" && expected == qrReq.Code {
