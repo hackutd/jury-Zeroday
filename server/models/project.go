@@ -25,6 +25,15 @@ type Project struct {
 	Prioritized   bool               `bson:"prioritized" json:"prioritized"`
 	Group         int64              `bson:"group" json:"group"`
 	LastActivity  primitive.DateTime `bson:"last_activity" json:"last_activity"`
+	// Team members from the Devpost PII export. Not sent in JSON (judge/admin responses),
+	// only used by the participants export
+	TeamMembers []TeamMember `bson:"team_members" json:"-"`
+}
+
+// TeamMember is a submitter or team member of a project, read from the Devpost PII export
+type TeamMember struct {
+	Name  string `bson:"name" json:"name"`
+	Email string `bson:"email" json:"email"`
 }
 
 func NewProject(name string, location int64, group int64, description string, url string, tryLink string, videoLink string, challengeList []string) *Project {
@@ -46,6 +55,7 @@ func NewProject(name string, location int64, group int64, description string, ur
 		Active:        true,
 		Prioritized:   false,
 		LastActivity:  primitive.DateTime(0),
+		TeamMembers:   []TeamMember{},
 	}
 }
 

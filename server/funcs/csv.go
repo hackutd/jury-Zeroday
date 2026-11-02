@@ -204,6 +204,75 @@ func parseDevpostChallenges(cell string) []string {
 	return challengeList
 }
 
+// devpostTeamCols holds the column indexes of one person's name and email in the Devpost PII export
+// (-1 when the column is missing)
+type devpostTeamCols struct {
+	first, last, email int
+}
+
+// findDevpostTeamColumns finds the submitter and team member columns by header name, since they come
+// after the hackathon's custom questions and move between exports. Returns nothing for the non-PII export.
+func findDevpostTeamColumns(header []string) []devpostTeamCols {
+	index := map[string]int{}
+	for i, h := range header {
+		name := normalizeDevpostHeader(h)
+		if _, ok := index[name]; !ok {
+			index[name] = i
+		}
+	}
+	col := func(name string) int {
+		if i, ok := index[name]; ok {
+			return i
+		}
+		return -1
+	}
+
+	cols := []devpostTeamCols{}
+	if first := col("submitter first name"); first != -1 {
+		cols = append(cols, devpostTeamCols{first, col("submitter last name"), col("submitter email")})
+	}
+	for n := 1; ; n++ {
+		prefix := fmt.Sprintf("team member %d ", n)
+		first := col(prefix + "first name")
+		if first == -1 {
+			break
+		}
+		cols = append(cols, devpostTeamCols{first, col(prefix + "last name"), col(prefix + "email")})
+	}
+	return cols
+}
+
+// parseDevpostTeam reads the submitter and team members of a row, trimming names and skipping
+// empty or repeated people (rows only have cells for the members the team has)
+func parseDevpostTeam(record []string, cols []devpostTeamCols) []models.TeamMember {
+	cell := func(i int) string {
+		if i < 0 || i >= len(record) {
+			return ""
+		}
+		return strings.TrimSpace(record[i])
+	}
+
+	members := []models.TeamMember{}
+	seen := map[string]bool{}
+	for _, c := range cols {
+		name := strings.TrimSpace(cell(c.first) + " " + cell(c.last))
+		email := cell(c.email)
+		if name == "" && email == "" {
+			continue
+		}
+		key := strings.ToLower(email)
+		if key == "" {
+			key = strings.ToLower(name)
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		members = append(members, models.TeamMember{Name: name, Email: email})
+	}
+	return members
+}
+
 // Generate a workable CSV for Jury based on the output CSV from Devpost
 // Columns (by position, verified against the header row):
 //  0. Project Title - title
@@ -221,7 +290,8 @@ func parseDevpostChallenges(cell string) []string {
 //  12. Attached File S3 Key - ignore
 //  13. Opt-In Prizes - challenge_list
 //  14. Built With - ignore
-//  15. (and remaining columns) Notes, team info, and custom questions - ignore
+//  15. (and remaining columns) Notes, team info, and custom questions - ignore, except
+//     Submitter / Team Member N First Name, Last Name, Email (PII export only, found by header name)
 func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, error) {
 	r := csv.NewReader(strings.NewReader(content))
 
@@ -238,6 +308,7 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 	if err := checkDevpostHeader(header); err != nil {
 		return nil, err
 	}
+	teamCols := findDevpostTeamColumns(header)
 
 	// Get the starting table number
 	tableNum, err := database.GetMaxTableNum(db, context.Background())
@@ -301,6 +372,7 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 			record[devpostColVideoLink],
 			challengeList,
 		))
+		projects[len(projects)-1].TeamMembers = parseDevpostTeam(record, teamCols)
 	}
 
 	return projects, nil

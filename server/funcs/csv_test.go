@@ -77,3 +77,49 @@ func TestCreateChallengeProjectCSV(t *testing.T) {
 		t.Fatalf("unexpected second row: %v", rows[2])
 	}
 }
+
+// Header row from the 2025 Devpost PII export (custom questions shortened)
+const devpostPIIHeader = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email,Team Member 2 First Name,Team Member 2 Last Name,Team Member 2 Email`
+
+func TestFindDevpostTeamColumns(t *testing.T) {
+	cols := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
+	want := []devpostTeamCols{{15, 16, 17}, {21, 22, 23}, {24, 25, 26}}
+	if len(cols) != len(want) {
+		t.Fatalf("got %v, want %v", cols, want)
+	}
+	for i := range want {
+		if cols[i] != want[i] {
+			t.Fatalf("got %v, want %v", cols, want)
+		}
+	}
+
+	// The non-PII export has no team columns
+	if cols := findDevpostTeamColumns(readCSVRows(t, devpostHeader)[0]); len(cols) != 0 {
+		t.Fatalf("expected no team columns in non-PII header, got %v", cols)
+	}
+}
+
+func TestParseDevpostTeam(t *testing.T) {
+	cols := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
+	record := make([]string, 24)
+	record[15], record[16], record[17] = " Keshav ", "Taneja ", "keshav@example.com"
+	record[21], record[22], record[23] = "username01", "", "user@example.com"
+	// Row is shorter than the header: team member 2 has no cells
+
+	got := parseDevpostTeam(record, cols)
+	want := []string{"Keshav Taneja <keshav@example.com>", "username01 <user@example.com>"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i, m := range got {
+		if m.Name+" <"+m.Email+">" != want[i] {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+	}
+
+	// A person listed twice (same email) is only added once
+	record[21], record[22], record[23] = "Keshav", "Taneja", "KESHAV@example.com"
+	if got := parseDevpostTeam(record, cols); len(got) != 1 {
+		t.Fatalf("expected duplicate member to be dropped, got %v", got)
+	}
+}
