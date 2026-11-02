@@ -294,6 +294,7 @@ func parseDevpostTeam(record []string, cols []devpostTeamCols) []models.TeamMemb
 //     Submitter / Team Member N First Name, Last Name, Email (PII export only, found by header name)
 func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, error) {
 	r := csv.NewReader(strings.NewReader(content))
+	r.FieldsPerRecord = -1 // PII export rows end after the team's last member, so lengths vary
 
 	// Empty CSV file
 	if content == "" {
