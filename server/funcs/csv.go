@@ -212,7 +212,11 @@ type devpostTeamCols struct {
 
 // findDevpostTeamColumns finds the submitter and team member columns by header name, since they come
 // after the hackathon's custom questions and move between exports. Returns nothing for the non-PII export.
-func findDevpostTeamColumns(header []string) []devpostTeamCols {
+//
+// Devpost only names Team Member 1's columns: further members are unlabeled (first, last, email)
+// cells past the end of the header. When the last named member block ends the header, extraFrom is
+// the index those unlabeled blocks start at (otherwise -1).
+func findDevpostTeamColumns(header []string) (cols []devpostTeamCols, extraFrom int) {
 	index := map[string]int{}
 	for i, h := range header {
 		name := normalizeDevpostHeader(h)
@@ -227,7 +231,8 @@ func findDevpostTeamColumns(header []string) []devpostTeamCols {
 		return -1
 	}
 
-	cols := []devpostTeamCols{}
+	cols = []devpostTeamCols{}
+	extraFrom = -1
 	if first := col("submitter first name"); first != -1 {
 		cols = append(cols, devpostTeamCols{first, col("submitter last name"), col("submitter email")})
 	}
@@ -237,19 +242,34 @@ func findDevpostTeamColumns(header []string) []devpostTeamCols {
 		if first == -1 {
 			break
 		}
-		cols = append(cols, devpostTeamCols{first, col(prefix + "last name"), col(prefix + "email")})
+		last, email := col(prefix+"last name"), col(prefix+"email")
+		cols = append(cols, devpostTeamCols{first, last, email})
+		if last == first+1 && email == first+2 && email == len(header)-1 {
+			extraFrom = email + 1
+		} else {
+			extraFrom = -1
+		}
 	}
-	return cols
+	return cols, extraFrom
 }
 
-// parseDevpostTeam reads the submitter and team members of a row, trimming names and skipping
-// empty or repeated people (rows only have cells for the members the team has)
-func parseDevpostTeam(record []string, cols []devpostTeamCols) []models.TeamMember {
+// parseDevpostTeam reads the submitter and team members of a row (including the unlabeled member
+// cells from extraFrom on, see findDevpostTeamColumns), trimming names and skipping empty or
+// repeated people (rows only have cells for the members the team has)
+func parseDevpostTeam(record []string, cols []devpostTeamCols, extraFrom int) []models.TeamMember {
 	cell := func(i int) string {
 		if i < 0 || i >= len(record) {
 			return ""
 		}
 		return strings.TrimSpace(record[i])
+	}
+
+	// Copy before adding this row's unlabeled member blocks, since cols is shared across rows
+	if extraFrom != -1 {
+		cols = append([]devpostTeamCols{}, cols...)
+		for i := extraFrom; i < len(record); i += 3 {
+			cols = append(cols, devpostTeamCols{i, i + 1, i + 2})
+		}
 	}
 
 	members := []models.TeamMember{}
@@ -309,7 +329,7 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 	if err := checkDevpostHeader(header); err != nil {
 		return nil, err
 	}
-	teamCols := findDevpostTeamColumns(header)
+	teamCols, teamExtraFrom := findDevpostTeamColumns(header)
 
 	// Get the starting table number
 	tableNum, err := database.GetMaxTableNum(db, context.Background())
@@ -373,7 +393,7 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 			record[devpostColVideoLink],
 			challengeList,
 		))
-		projects[len(projects)-1].TeamMembers = parseDevpostTeam(record, teamCols)
+		projects[len(projects)-1].TeamMembers = parseDevpostTeam(record, teamCols, teamExtraFrom)
 	}
 
 	return projects, nil

@@ -78,36 +78,49 @@ func TestCreateChallengeProjectCSV(t *testing.T) {
 	}
 }
 
-// Header row from the 2025 Devpost PII export (custom questions shortened)
-const devpostPIIHeader = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email,Team Member 2 First Name,Team Member 2 Last Name,Team Member 2 Email`
+// Header row from the 2025 Devpost PII export (custom questions shortened). Like the real export, only
+// Team Member 1's columns are named: other members are unlabeled cells past the end of the header
+const devpostPIIHeader = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email`
 
 func TestFindDevpostTeamColumns(t *testing.T) {
-	cols := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
-	want := []devpostTeamCols{{15, 16, 17}, {21, 22, 23}, {24, 25, 26}}
-	if len(cols) != len(want) {
+	cols, extraFrom := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
+	want := []devpostTeamCols{{15, 16, 17}, {21, 22, 23}}
+	if len(cols) != len(want) || cols[0] != want[0] || cols[1] != want[1] {
 		t.Fatalf("got %v, want %v", cols, want)
 	}
-	for i := range want {
-		if cols[i] != want[i] {
-			t.Fatalf("got %v, want %v", cols, want)
-		}
+	if extraFrom != 24 {
+		t.Fatalf("expected unlabeled members to start at column 24, got %d", extraFrom)
 	}
 
 	// The non-PII export has no team columns
-	if cols := findDevpostTeamColumns(readCSVRows(t, devpostHeader)[0]); len(cols) != 0 {
-		t.Fatalf("expected no team columns in non-PII header, got %v", cols)
+	if cols, extraFrom := findDevpostTeamColumns(readCSVRows(t, devpostHeader)[0]); len(cols) != 0 || extraFrom != -1 {
+		t.Fatalf("expected no team columns in non-PII header, got %v, %d", cols, extraFrom)
+	}
+
+	// Named member columns that don't end the header are not followed by unlabeled members
+	header := append(readCSVRows(t, devpostPIIHeader)[0], "Some Later Question")
+	if _, extraFrom := findDevpostTeamColumns(header); extraFrom != -1 {
+		t.Fatalf("expected no unlabeled members when member columns don't end the header, got %d", extraFrom)
 	}
 }
 
 func TestParseDevpostTeam(t *testing.T) {
-	cols := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
-	record := make([]string, 24)
-	record[15], record[16], record[17] = " Keshav ", "Taneja ", "keshav@example.com"
-	record[21], record[22], record[23] = "username01", "", "user@example.com"
-	// Row is shorter than the header: team member 2 has no cells
+	cols, extraFrom := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
 
-	got := parseDevpostTeam(record, cols)
-	want := []string{"Keshav Taneja <keshav@example.com>", "username01 <user@example.com>"}
+	// Submitter, Team Member 1, then two unlabeled members past the header (one with no last name)
+	record := make([]string, 30)
+	record[15], record[16], record[17] = " Keshav ", "Taneja ", "keshav@example.com"
+	record[21], record[22], record[23] = "Prakrit", "Chauhan", "prakrit@example.com"
+	record[24], record[25], record[26] = "Niket", "Sheth", "niket@example.com"
+	record[27], record[28], record[29] = "username01", "", "user@example.com"
+
+	got := parseDevpostTeam(record, cols, extraFrom)
+	want := []string{
+		"Keshav Taneja <keshav@example.com>",
+		"Prakrit Chauhan <prakrit@example.com>",
+		"Niket Sheth <niket@example.com>",
+		"username01 <user@example.com>",
+	}
 	if len(got) != len(want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
@@ -117,9 +130,19 @@ func TestParseDevpostTeam(t *testing.T) {
 		}
 	}
 
+	// A solo submitter's row ends before Team Member 1's columns
+	if got := parseDevpostTeam(record[:21], cols, extraFrom); len(got) != 1 || got[0].Name != "Keshav Taneja" {
+		t.Fatalf("expected only the submitter, got %v", got)
+	}
+
+	// Parsing a row must not change the shared columns for later rows
+	if len(cols) != 2 {
+		t.Fatalf("parseDevpostTeam modified the shared columns: %v", cols)
+	}
+
 	// A person listed twice (same email) is only added once
 	record[21], record[22], record[23] = "Keshav", "Taneja", "KESHAV@example.com"
-	if got := parseDevpostTeam(record, cols); len(got) != 1 {
+	if got := parseDevpostTeam(record[:24], cols, extraFrom); len(got) != 1 {
 		t.Fatalf("expected duplicate member to be dropped, got %v", got)
 	}
 }
