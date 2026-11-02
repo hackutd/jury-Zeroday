@@ -514,6 +514,55 @@ func CreateChallengeProjectCSV(projects []*models.Project) []byte {
 	return csvBuffer.Bytes()
 }
 
+// CreateParticipantsCSV creates a CSV with one row per project and every team member's name and
+// email, for emailing teams their table, sorted by table number. Contains PII: admin only.
+func CreateParticipantsCSV(projects []*models.Project) []byte {
+	csvBuffer := &bytes.Buffer{}
+
+	// Create a new CSV writer
+	w := csv.NewWriter(csvBuffer)
+
+	// Sort a copy of the projects by table number
+	sorted := make([]*models.Project, len(projects))
+	copy(sorted, projects)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Location < sorted[j].Location })
+
+	// One name and one email column per member, sized to the biggest team
+	maxMembers := 0
+	for _, project := range sorted {
+		maxMembers = max(maxMembers, len(project.TeamMembers))
+	}
+
+	// Write the header
+	header := []string{"Table", "Project", "Devpost"}
+	for i := 1; i <= maxMembers; i++ {
+		header = append(header, fmt.Sprintf("Member %d Name", i))
+	}
+	for i := 1; i <= maxMembers; i++ {
+		header = append(header, fmt.Sprintf("Member %d Email", i))
+	}
+	w.Write(header)
+
+	// Write each project, leaving the extra member columns empty for smaller teams
+	for _, project := range sorted {
+		names := make([]string, maxMembers)
+		emails := make([]string, maxMembers)
+		for i, member := range project.TeamMembers {
+			names[i] = member.Name
+			emails[i] = member.Email
+		}
+		row := []string{fmt.Sprintf("%d", project.Location), project.Name, project.Url}
+		row = append(row, names...)
+		row = append(row, emails...)
+		w.Write(row)
+	}
+
+	// Flush the writer
+	w.Flush()
+
+	return csvBuffer.Bytes()
+}
+
 // CreateProjectChallengeZip creates a zip file with a CSV for each challenge
 func CreateProjectChallengeZip(projects []*models.Project) ([]byte, error) {
 	csvList := [][]byte{}

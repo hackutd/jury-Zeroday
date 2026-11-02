@@ -123,3 +123,28 @@ func TestParseDevpostTeam(t *testing.T) {
 		t.Fatalf("expected duplicate member to be dropped, got %v", got)
 	}
 }
+
+func TestCreateParticipantsCSV(t *testing.T) {
+	p1 := models.NewProject("Second", 20, 1, "desc", "https://devpost.com/b", "", "", []string{})
+	p1.TeamMembers = []models.TeamMember{{Name: "Ann A", Email: "ann@example.com"}}
+	p2 := models.NewProject("First", 10, 1, "desc", "https://devpost.com/a", "", "", []string{})
+	p2.TeamMembers = []models.TeamMember{{Name: "Bob B", Email: "bob@example.com"}, {Name: "Cat C", Email: ""}}
+	p3 := models.NewProject("Third", 30, 1, "desc", "https://devpost.com/c", "", "", []string{})
+	p3.TeamMembers = nil // imported before team members existed
+
+	rows := readCSVRows(t, string(CreateParticipantsCSV([]*models.Project{p1, p2, p3})))
+	want := [][]string{
+		{"Table", "Project", "Devpost", "Member 1 Name", "Member 2 Name", "Member 1 Email", "Member 2 Email"},
+		{"10", "First", "https://devpost.com/a", "Bob B", "Cat C", "bob@example.com", ""},
+		{"20", "Second", "https://devpost.com/b", "Ann A", "", "ann@example.com", ""},
+		{"30", "Third", "https://devpost.com/c", "", "", "", ""},
+	}
+	if len(rows) != len(want) {
+		t.Fatalf("got %v, want %v", rows, want)
+	}
+	for i := range want {
+		if strings.Join(rows[i], "|") != strings.Join(want[i], "|") {
+			t.Fatalf("row %d: got %v, want %v", i, rows[i], want[i])
+		}
+	}
+}
