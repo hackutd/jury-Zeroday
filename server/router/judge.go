@@ -8,6 +8,7 @@ import (
 	"server/judging"
 	"server/models"
 	"server/util"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,6 +22,33 @@ func GetJudge(ctx *gin.Context) {
 
 	// Send Judge
 	ctx.JSON(http.StatusOK, judge)
+}
+
+// validateJudgeTrack checks that a new judge's track can be judged with the current options.
+// Returns the track with the same casing as the options' track list (when track judging is on),
+// so that track matching and aggregation are consistent.
+func validateJudgeTrack(options *models.Options, track string) (string, error) {
+	track = strings.TrimSpace(track)
+
+	// General judges are only allowed if general judging is enabled
+	if track == "" {
+		if !options.GeneralJudgingEnabled() {
+			return "", errors.New("general judging is disabled, judges must be assigned a track")
+		}
+		return "", nil
+	}
+
+	// If track judging is off, reject tracks since track judges don't count toward general scores
+	if !options.JudgeTracks {
+		return "", errors.New("track judging is disabled, remove the judge's track or enable track judging")
+	}
+
+	// Otherwise, the track must be one of the judged tracks
+	i := util.IndexFold(options.Tracks, track)
+	if i == -1 {
+		return "", errors.New("track '" + track + "' is not one of the judged tracks")
+	}
+	return options.Tracks[i], nil
 }
 
 // POST /judge/new - Endpoint to add a single judge
@@ -50,6 +78,18 @@ func AddJudge(ctx *gin.Context) {
 
 	// Run remaining actions in a transaction
 	err = database.WithTransaction(state.Db, func(sc mongo.SessionContext) error {
+		// Make sure the judge's track is valid
+		options, err := database.GetOptions(state.Db, sc)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting options: " + err.Error()})
+			return err
+		}
+		judgeReq.Track, err = validateJudgeTrack(options, judgeReq.Track)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return err
+		}
+
 		// Determine group judge should go in
 		group := int64(0)
 		if judgeReq.Track == "" {
@@ -207,6 +247,20 @@ func AddJudgesCsv(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "error parsing CSV file: " + err.Error()})
 		return
+	}
+
+	// Make sure all judges' tracks are valid
+	options, err := database.GetOptions(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting options: " + err.Error()})
+		return
+	}
+	for _, judge := range judges {
+		judge.Track, err = validateJudgeTrack(options, judge.Track)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid track for judge " + judge.Name + ": " + err.Error()})
+			return
+		}
 	}
 
 	// Get hostname from request
@@ -410,6 +464,7 @@ func GetNextJudgeProject(ctx *gin.Context) {
 		// This is to ensure that no projects are gotten if the clock is paused
 		state.Clock.Mutex.Lock()
 		if !state.Clock.State.Running || options.Deliberation {
+			state.Clock.Mutex.Unlock()
 			return nil
 		}
 		state.Clock.Mutex.Unlock()
@@ -1071,6 +1126,13 @@ func AddJudgeFromQR(ctx *gin.Context) {
 		}
 		if judge != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "judge already exists"})
+			return err
+		}
+
+		// Make sure the judge's track is valid
+		qrReq.Track, err = validateJudgeTrack(options, qrReq.Track)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return err
 		}
 

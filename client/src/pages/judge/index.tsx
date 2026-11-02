@@ -8,7 +8,6 @@ import Loading from '../../components/Loading';
 import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
-import StarList from '../../components/judge/dnd/StarList';
 import { Helmet } from 'react-helmet';
 
 const Judge = () => {
@@ -102,11 +101,7 @@ const Judge = () => {
                     <StatBlock name="Seen" value={judge.seen_projects.length + judge.flagged.length} />
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
-                {judge.track === '' ? (
-                    <Ranking judge={judge} deliberation={deliberation} />
-                ) : (
-                    <StarList judge={judge} deliberation={deliberation} />
-                )}
+                <Ranking judge={judge} deliberation={deliberation} />
             </Container>
         </>
     );

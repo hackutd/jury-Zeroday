@@ -188,6 +188,7 @@ func ListProjects(ctx *gin.Context) {
 			projects[i].Score = pScore.Score
 			projects[i].Stars = pScore.Stars
 			projects[i].TrackStars = pScore.TrackStars
+			projects[i].TrackScores = pScore.TrackScores
 		}
 	}
 

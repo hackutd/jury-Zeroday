@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { postRequest } from '../../../api';
 import { errorAlert } from '../../../util';
 import Checkbox from '../../Checkbox';
@@ -20,6 +20,16 @@ const NewJudgeForm = () => {
     const fetchJudgeStats = useAdminStore((state) => state.fetchJudgeStats);
     const options = useOptionsStore((state) => state.options);
 
+    // General judges (blank track) can't be added if general judging is turned off
+    const generalJudging = !options.judge_tracks || !options.disable_general_judging;
+    const defaultTrack = generalJudging ? '' : options.tracks[0] ?? '';
+
+    useEffect(() => {
+        if (!generalJudging && track === '') {
+            setTrack(defaultTrack);
+        }
+    }, [generalJudging, defaultTrack]);
+
     const submit = async () => {
         setIsSubmitting(true);
 
@@ -30,7 +40,14 @@ const NewJudgeForm = () => {
             return;
         }
 
-        const newData = { name, email, track, notes, no_send: noSend };
+        // Judges can only be given a track if track judging is on
+        const newData = {
+            name,
+            email,
+            track: options.judge_tracks ? track : '',
+            notes,
+            no_send: noSend,
+        };
 
         const res = await postRequest('/judge/new', 'admin', newData);
         if (res.status !== 200) {
@@ -48,7 +65,7 @@ const NewJudgeForm = () => {
     const resetForm = () => {
         setName('');
         setEmail('');
-        setTrack('');
+        setTrack(defaultTrack);
         setNotes('');
         setNoSend(false);
     };
@@ -62,15 +79,17 @@ const NewJudgeForm = () => {
                         <TextInput label="Name" text={name} setText={setName} full />
                         <TextInput label="Email" text={email} setText={setEmail} full />
                     </div>
-                    <div className="w-full">
-                        <p className="text-light text-sm mb-1">Track</p>
-                        <Dropdown
-                            options={['', ...options.tracks]}
-                            selected={track}
-                            setSelected={setTrack}
-                            className="bg-white rounded-sm hover:bg-background w-full"
-                        />
-                    </div>
+                    {options.judge_tracks && (
+                        <div className="w-full">
+                            <p className="text-light text-sm mb-1">Track</p>
+                            <Dropdown
+                                options={generalJudging ? ['', ...options.tracks] : options.tracks}
+                                selected={track}
+                                setSelected={setTrack}
+                                className="bg-white rounded-sm hover:bg-background w-full"
+                            />
+                        </div>
+                    )}
                     <TextArea
                         value={notes}
                         setValue={setNotes}

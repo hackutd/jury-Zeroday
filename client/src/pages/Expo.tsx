@@ -60,7 +60,11 @@ const Expo = () => {
         const filteredProjects =
             track === ''
                 ? sortedProjects
-                : sortedProjects.filter((p) => p.challenge_list.indexOf(track) !== -1);
+                : sortedProjects.filter((p) =>
+                      p.challenge_list
+                          .split(',')
+                          .some((c) => c.trim().toLowerCase() === track.toLowerCase())
+                  );
 
         setProjects(filteredProjects);
     }, [rawProjects, nameSort, track]);

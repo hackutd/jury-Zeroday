@@ -79,9 +79,11 @@ const ProjectRow = ({ project, idx }: ProjectRowProps) => {
         }
     }, [allFlags, project]);
 
+    let score = project.score;
     let stars = project.stars;
     let seen = project.seen;
     if (options.judge_tracks && track !== '') {
+        score = project.track_scores?.[track] || 0;
         stars = project.track_stars[track] || 0;
         seen = project.track_seen[track] || 0;
     }
@@ -139,7 +141,7 @@ const ProjectRow = ({ project, idx }: ProjectRowProps) => {
                 {options.multi_group && track === '' && (
                     <td className="text-center">{project.group}</td>
                 )}
-                {track === '' && <td className="text-center">{project.score}</td>}
+                <td className="text-center">{score}</td>
                 <td className="text-center">{stars}</td>
                 <td className="text-center">{seen}</td>
                 <td className="text-center">{timeSince(project.last_activity)}</td>

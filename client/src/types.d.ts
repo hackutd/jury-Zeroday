@@ -14,6 +14,7 @@ interface Project {
     score: number;
     stars: number;
     track_stars: { [track: string]: number };
+    track_scores: { [track: string]: number };
     group: number;
     last_activity: number;
 }
@@ -138,6 +139,7 @@ interface Options {
     ignore_tracks: string[];
     block_reqs: boolean;
     max_req_per_min: number;
+    disable_general_judging: boolean;
 }
 
 interface FetchResponse<T> {

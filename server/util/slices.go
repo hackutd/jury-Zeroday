@@ -3,6 +3,7 @@ package util
 import (
 	"sort"
 	"strconv"
+	"strings"
 
 	"golang.org/x/exp/constraints"
 )
@@ -104,4 +105,15 @@ func SetDiff[T comparable](a, b []T) []T {
 	}
 
 	return diff
+}
+
+// IndexFold returns the index of the first string in the slice equal to s, ignoring case.
+// Will return -1 if the string is not found.
+func IndexFold(arr []string, s string) int {
+	return IndexFunc(arr, func(v string) bool { return strings.EqualFold(v, s) })
+}
+
+// ContainsFold returns true if the slice contains s, ignoring case
+func ContainsFold(arr []string, s string) bool {
+	return IndexFold(arr, s) >= 0
 }

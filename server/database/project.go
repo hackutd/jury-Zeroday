@@ -45,7 +45,7 @@ func FindAllProjects(db *mongo.Database, ctx context.Context) ([]*models.Project
 // FindProjectsByGroup returns a list of all projects with the specific track
 func FindProjectsByTrack(db *mongo.Database, ctx context.Context, track string) ([]*models.Project, error) {
 	projects := make([]*models.Project, 0)
-	cursor, err := db.Collection("projects").Find(ctx, gin.H{"challenge_list": track})
+	cursor, err := db.Collection("projects").Find(ctx, gin.H{"challenge_list": util.ExactFoldRegex(track)})
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func CountProjectDocuments(db *mongo.Database) (int64, error) {
 
 // CountTrackProjects returns the number of projects in a specific track
 func CountTrackProjects(db *mongo.Database, track string) (int64, error) {
-	return db.Collection("projects").CountDocuments(context.Background(), gin.H{"challenge_list": track})
+	return db.Collection("projects").CountDocuments(context.Background(), gin.H{"challenge_list": util.ExactFoldRegex(track)})
 }
 
 // SetProjectActive sets the active field of a project (hide or unhide project)

@@ -75,27 +75,32 @@ func InitAggregateRankings(db *mongo.Database) error {
 }
 
 type ProjectScores struct {
-	Score      int64            `bson:"score" json:"score"`
-	Stars      int64            `bson:"stars" json:"stars"`
-	TrackStars map[string]int64 `bson:"track_stars" json:"track_stars"`
+	Score       int64            `bson:"score" json:"score"`
+	Stars       int64            `bson:"stars" json:"stars"`
+	TrackStars  map[string]int64 `bson:"track_stars" json:"track_stars"`
+	TrackScores map[string]int64 `bson:"track_scores" json:"track_scores"`
 }
 
 type ProjectScoresWithId struct {
-	ProjectId  primitive.ObjectID `bson:"_id" json:"_id"`
-	Score      int64              `bson:"score" json:"score"`
-	Stars      int64              `bson:"stars" json:"stars"`
-	TrackStars map[string]int64   `bson:"track_stars" json:"track_stars"`
+	ProjectId   primitive.ObjectID `bson:"_id" json:"_id"`
+	Score       int64              `bson:"score" json:"score"`
+	Stars       int64              `bson:"stars" json:"stars"`
+	TrackStars  map[string]int64   `bson:"track_stars" json:"track_stars"`
+	TrackScores map[string]int64   `bson:"track_scores" json:"track_scores"`
 }
 
 func removeId(scoresWithId *ProjectScoresWithId) *ProjectScores {
 	return &ProjectScores{
-		Score:      scoresWithId.Score,
-		Stars:      scoresWithId.Stars,
-		TrackStars: scoresWithId.TrackStars,
+		Score:       scoresWithId.Score,
+		Stars:       scoresWithId.Stars,
+		TrackStars:  scoresWithId.TrackStars,
+		TrackScores: scoresWithId.TrackScores,
 	}
 }
 
-// AggregateScores takes the scores and stars from judges and aggregates them to form a final ranking
+// AggregateScores takes the scores and stars from judges and aggregates them to form a final ranking.
+// General scores and stars only come from general judges. Track scores and stars only come from
+// the judges of that track, keyed by track name.
 func AggregateScores(db *mongo.Database, ctx context.Context) (map[primitive.ObjectID]ProjectScores, error) {
 	pipeline := mongo.Pipeline{
 		// === Pipeline 1: Aggregate all general judges' ranking scores ===
@@ -159,12 +164,43 @@ func AggregateScores(db *mongo.Database, ctx context.Context) (map[primitive.Obj
 			},
 		}}},
 
+		// === Pipeline 4: Aggregate all track judges' ranking scores, grouped by project and track ===
+		bson.D{{"$unionWith", gin.H{
+			"coll": "judges",
+			"pipeline": []gin.H{
+				{"$match": gin.H{"track": gin.H{"$ne": ""}}},
+				{"$unwind": "$rankings_agg"},
+				{"$group": gin.H{
+					"_id": gin.H{
+						"projectId": "$rankings_agg.project_id",
+						"track":     "$track",
+					},
+					"score": gin.H{"$sum": "$rankings_agg.score"},
+				}},
+				{"$group": gin.H{
+					"_id": "$_id.projectId",
+					"track_scores": gin.H{
+						"$push": gin.H{
+							"k": "$_id.track",
+							"v": "$score",
+						},
+					},
+				}},
+				{"$addFields": gin.H{
+					"track_scores": gin.H{
+						"$arrayToObject": "$track_scores",
+					},
+				}},
+			},
+		}}},
+
 		// // === Final merge of all fields ===
 		bson.D{{"$group", bson.D{
 			{"_id", "$_id"},
 			{"score", bson.D{{"$sum", "$score"}}},
 			{"stars", bson.D{{"$sum", "$stars"}}},
 			{"track_stars", bson.D{{"$mergeObjects", "$track_stars"}}},
+			{"track_scores", bson.D{{"$mergeObjects", "$track_scores"}}},
 		}}},
 	}
 

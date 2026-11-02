@@ -17,7 +17,8 @@ Key domain terms:
 - **Judge**: authenticated by bearer token; has `Track` (`""` = general judge), `Group`, `SeenProjects`, `Rankings`, `RankingsAgg` (Copeland per judge), `Flagged`, `Current`.
 - **Flag**: skip/report record with a `reason` (`busy`, `absent`, rule-break...). 3 `absent` flags auto-hide a project.
 - **Groups** (`MultiGroup`): splits the room into zones so judges stay physically nearby, moving groups after `AutoSwitchProp` of a group is seen.
-- **Tracks** (`JudgeTracks`): track judges see only projects whose `ChallengeList` contains their track, in table order, up to `TrackViews[i]` views. They currently produce **stars only** (`track_stars`). Their rankings are excluded from the general score. Track matching is **exact, case-sensitive** string equality.
+- **Tracks** (`JudgeTracks`): track judges see only projects whose `ChallengeList` contains their track, up to `TrackViews[i]` views (a cap, not a minimum). Next project = prioritized, then fewest `TrackSeen[track]`, then least compared using a matrix built on the fly from **that track's judges only**, then nearest table ahead (`PickNextTrackProject`). They rank like general judges: `track_scores[track]` (Copeland over that track's judges) plus `track_stars`. Track judges never affect the general `score`/`stars`. Track matching **ignores case** (`util.IndexFold` / `util.ContainsFold`, `util.ExactFoldRegex` for Mongo); judge tracks are stored with the casing from `options.Tracks`.
+- **General judging off** (`DisableGeneralJudging`, only applies when `JudgeTracks` is on; use `options.GeneralJudgingEnabled()`): stored inverted so old options documents keep general on. When off, judges without a track are rejected on add (form, CSV, QR) and existing general judges get no project.
 - **Deliberation**: option that freezes ranking edits.
 - **Clock**: global judging timer / paused state (`models/clock.go`, `SafeClock`).
 - **Comparisons**: in-memory matrix of how often each project pair was seen by the same judge. Used to pick the least-compared next project. Lives in router `State` and must be updated or reloaded when projects or judges change.
@@ -91,10 +92,10 @@ test-data/         sample judges.csv / projects.csv (Jury format)
 ## CSV import (important, it's fragile)
 
 `server/funcs/csv.go` reads columns **by position, not header name**:
-- Judges: `name, email, track?, notes?` (the track is taken raw, not trimmed).
+- Judges: `name, email, track?, notes?`. The track is validated in the router (`validateJudgeTrack`): trimmed, matched ignoring case against `options.Tracks`, rejected if unknown (tracks on), empty (general off) or set at all while tracks are off (track judges never count toward general scores). `/qr/check/:track` also fails when tracks are off.
 - Projects (Jury format): `name, description, url, try_link?, video_link?, challenge_list?` (comma-separated, quoted).
-- Devpost: always skips the header and expects ≥13 columns. Uses col 0 title, 1 url, 6 description, 7 try link, 8 video, **9 Opt-In Prizes** → `ChallengeList`. Drafts are skipped. `IgnoreTracks` filters at import time.
-- Known issue: after an event Devpost inserts an extra table-number column, shifting indices (see the TODO). Then URLs end up in `ChallengeList`, and "Export by Challenges" produces `http`/`https` folders, because prize names are used unsanitized as zip file names.
+- Devpost (2025 export format): still positional, but the header row is validated (`checkDevpostHeader`) so a layout change fails loudly. Uses col 0 title, 1 url, 2 status, 8 About The Project, 9 "Try it out" links, 10 video, **13 Opt-In Prizes** → `ChallengeList`. Drafts are skipped. `IgnoreTracks` filters at import time.
+- "Export by Challenges" zips one CSV per prize (`Table, Name, Devpost, Try It Out`, sorted by table). Prize names are still used unsanitized as zip file names.
 
 ## Commands
 
@@ -120,9 +121,11 @@ Integration tests live in `tests/tests/*.go` as `func X(context *util.Context) u
 
 - Deploy target is **DigitalOcean App Platform** from `hackutd/jury-Zeroday` `master`, built from the root `Dockerfile`. The `.do/deploy.template.yaml` source URL points to this fork. The "Deploy to DO" button in `docs/docs/usage/deploy.md` still points to upstream.
 - `.github/workflows/deploy.yml` is inherited from upstream. It pushes `ghcr.io/hackutd/jury:latest` (it **would overwrite upstream's image**) and SSHes into upstream's server. Don't rely on it, and don't extend it. A CI/CD cleanup plan exists and is on hold.
-- `scripts/test-runner.sh`: the `timeout` counter never increments, and empty logs count as success.
-- `PickNextProject` keys track behavior on `judge.Track != ""` without checking `options.JudgeTracks`.
-- Planned work under discussion: replace track **stars** with per-track **rankings** (Copeland over track judges only, giving `track_scores`), header-based Devpost parsing, and single-prize CSV export.
+- **Known upstream race in `/judge/next`:** picking a project doesn't actually write the project document (`UpdateAfterPicked` only sets `prioritized: false`, usually a no-op), so two judges asking at the same moment can get the same project. If they also finish at the same moment, one gets a 500 `WriteConflict` and must resubmit. The concurrency integration tests only log this (`WARNING ... known race`). Fixing it means changing the handlers' "write JSON inside the transaction" pattern so Mongo can retry.
+- CI (`ci.yml`, run on PRs/pushes to `staging` and PRs to `master`): build, vet, unit tests (`-skip TestSendJudgeEmail`), frontend build, prod image build, and the integration suite. Integration tests run in name order within each group.
+- `UpdateProjectComparisonCount` has no callers, so the shared general `Comparisons` matrix is only rebuilt at startup and on project add/edit/delete (stale during judging). Track picking doesn't use it.
+- `CreateComparisons` maps unknown project IDs (eg. deleted projects in a judge's `SeenProjects`) to index 0. Track picking filters these out first (`withExistingSeenProjects`); general picking doesn't.
+- Planned work under discussion: single-prize CSV export.
 
 ## Working rules
 

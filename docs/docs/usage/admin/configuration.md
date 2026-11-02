@@ -50,7 +50,7 @@ Here, we define a couple of the parameters for the judging process. The first tw
 
 ### Multi-Group and Track Judging
 
-In this section, you can toggle the multi-group judging and track judging options. Track judging allows judges to view only projects from specific tracks and judge them separately from the main judging. Multi-group judging can be used to group judges so they will only be assigned projects in their group, switching groups periodically to minimize walking. More detailed information about how to use track and group judging are on their respective pages:
+In this section, you can toggle the multi-group judging and track judging options. Track judging allows judges to view only projects from specific tracks and rank them separately from the main judging. When track judging is on, you can also choose whether to keep general judging running alongside it. Multi-group judging can be used to group judges so they will only be assigned projects in their group, switching groups periodically to minimize walking. More detailed information about how to use track and group judging are on their respective pages:
 
 - [Track Judging](/docs/usage/admin/tracks)
 - [Multi-Group Judging](/docs/usage/admin/groups)
