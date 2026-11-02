@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"tests/util"
 )
 
@@ -88,6 +89,74 @@ func ExportByChallengesZip(context *util.Context) util.Result {
 			if !slices.Equal(gotRows[i], wantRows[i]) {
 				return util.NewResult(false, fmt.Sprintf("%s row %d should be %v, got %v", name, i, wantRows[i], gotRows[i]))
 			}
+		}
+	}
+	return util.ResultOk()
+}
+
+// devpostPIICSV is a small Devpost PII export: one team of three, one solo submitter, and a draft
+// (custom question columns shortened). Like the real export, only Team Member 1's columns are named,
+// followed by a "..." column where the team's second member's unlabeled cells start
+const devpostPIICSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email,...
+Team Project,https://devpost.com/1-team,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,Design,go,Ann ,Lee,ann@example.com,,,2,Bob,Kim,bob@example.com,carlusername,,carl@example.com
+Solo Project,https://devpost.com/2-solo,Submitted (Hidden),Pending,Submit,,,,About,,,,,,go,Dee,Ray,dee@example.com,,,0
+Untitled,,Draft,Pending,Manage team,,,,,,,,,,,Eve,Fox,eve@example.com,,,0`
+
+// ExportParticipantsCSV verifies that importing the Devpost PII export stores team members, that
+// /admin/export/participants lists their names and emails in separate columns sorted by table, and that
+// the emails never show up in other project responses
+func ExportParticipantsCSV(context *util.Context) util.Result {
+	if res := resetProjects(context); !res.Success {
+		return res
+	}
+	status, body := util.PostFileWithStatus(context.Logger, "/project/devpost", "csv", "devpost.csv", devpostPIICSV, nil, util.AdminAuth())
+	if status != 200 || !util.IsOk(body) {
+		return util.NewResult(false, fmt.Sprintf("Devpost PII import failed (%d): %s", status, body))
+	}
+
+	// Move the team behind the solo project so sorting by table is actually checked
+	ids, res := getProjectIDs(context, "Team Project", "Solo Project")
+	if !res.Success {
+		return res
+	}
+	for i, location := range []int{50, 10} {
+		if moveRes := util.PutRequest(context.Logger, "/project/move/"+ids[i], util.H{"location": location}, util.AdminAuth()); !util.IsOk(moveRes) {
+			return util.NewResult(false, "Failed to move project: "+moveRes)
+		}
+	}
+
+	status, body = util.GetRequestWithStatus(context.Logger, "/admin/export/participants", util.AdminAuth())
+	if status != 200 {
+		return util.NewResult(false, fmt.Sprintf("Export participants failed (%d): %s", status, body))
+	}
+	rows, err := csv.NewReader(bytes.NewReader([]byte(body))).ReadAll()
+	if err != nil {
+		return util.NewResult(false, "Could not parse participants CSV: "+err.Error())
+	}
+	want := [][]string{
+		{"Table", "Project", "Devpost", "Member 1 Name", "Member 2 Name", "Member 3 Name", "Member 1 Email", "Member 2 Email", "Member 3 Email"},
+		{"10", "Solo Project", "https://devpost.com/2-solo", "Dee Ray", "", "", "dee@example.com", "", ""},
+		{"50", "Team Project", "https://devpost.com/1-team", "Ann Lee", "Bob Kim", "carlusername", "ann@example.com", "bob@example.com", "carl@example.com"},
+	}
+	if len(rows) != len(want) {
+		return util.NewResult(false, fmt.Sprintf("Participants CSV should have %d rows, got %v", len(want), rows))
+	}
+	for i := range want {
+		if !slices.Equal(rows[i], want[i]) {
+			return util.NewResult(false, fmt.Sprintf("Participants CSV row %d should be %v, got %v", i, want[i], rows[i]))
+		}
+	}
+
+	// The export is admin only
+	if status, _ := util.GetRequestWithStatus(context.Logger, "/admin/export/participants", util.DefaultAuth()); status == 200 {
+		return util.NewResult(false, "Participants export must require admin auth")
+	}
+
+	// Emails must not leak through other project responses or exports
+	for _, url := range []string{"/project/list", "/project/list/public", "/admin/export/projects"} {
+		_, listBody := util.GetRequestWithStatus(context.Logger, url, util.AdminAuth())
+		if strings.Contains(listBody, "@example.com") {
+			return util.NewResult(false, url+" should not include team member emails")
 		}
 	}
 	return util.ResultOk()
