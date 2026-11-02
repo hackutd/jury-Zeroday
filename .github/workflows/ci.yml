@@ -32,6 +32,15 @@ jobs:
       - name: Vet
         run: go vet -composites=false ./...
 
+      # Unit tests (TestSendJudgeEmail sends a real email, so it is skipped)
+      - name: Unit tests
+        run: go test -skip TestSendJudgeEmail ./...
+
+      # Static checks for the integration test suite (it is compiled and run in the integration job)
+      - name: Vet integration tests
+        working-directory: tests
+        run: go vet ./...
+
   frontend:
     name: frontend
     runs-on: ubuntu-latest

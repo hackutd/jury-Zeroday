@@ -121,7 +121,8 @@ Integration tests live in `tests/tests/*.go` as `func X(context *util.Context) u
 
 - Deploy target is **DigitalOcean App Platform** from `hackutd/jury-Zeroday` `master`, built from the root `Dockerfile`. The `.do/deploy.template.yaml` source URL points to this fork. The "Deploy to DO" button in `docs/docs/usage/deploy.md` still points to upstream.
 - `.github/workflows/deploy.yml` is inherited from upstream. It pushes `ghcr.io/hackutd/jury:latest` (it **would overwrite upstream's image**) and SSHes into upstream's server. Don't rely on it, and don't extend it. A CI/CD cleanup plan exists and is on hold.
-- `scripts/test-runner.sh`: the `timeout` counter never increments, and empty logs count as success.
+- **Known upstream race in `/judge/next`:** picking a project doesn't actually write the project document (`UpdateAfterPicked` only sets `prioritized: false`, usually a no-op), so two judges asking at the same moment can get the same project. If they also finish at the same moment, one gets a 500 `WriteConflict` and must resubmit. The concurrency integration tests only log this (`WARNING ... known race`). Fixing it means changing the handlers' "write JSON inside the transaction" pattern so Mongo can retry.
+- CI (`ci.yml`, run on PRs/pushes to `staging` and PRs to `master`): build, vet, unit tests (`-skip TestSendJudgeEmail`), frontend build, prod image build, and the integration suite. Integration tests run in name order within each group.
 - `UpdateProjectComparisonCount` has no callers, so the shared general `Comparisons` matrix is only rebuilt at startup and on project add/edit/delete (stale during judging). Track picking doesn't use it.
 - `CreateComparisons` maps unknown project IDs (eg. deleted projects in a judge's `SeenProjects`) to index 0. Track picking filters these out first (`withExistingSeenProjects`); general picking doesn't.
 - Planned work under discussion: single-prize CSV export.

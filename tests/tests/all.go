@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"sort"
 	"tests/util"
 	"time"
 )
@@ -22,9 +23,9 @@ func RunTests(context *util.Context) {
 		{
 			Name: "Smoke Tests",
 			Tests: map[string]func(*util.Context) util.Result{
-				"Heartbeat": Heartbeat,
-				"Admin Login":     SmokeAdminLogin,
-				"Admin Auth":      SmokeAdminAuth,
+				"Heartbeat":   Heartbeat,
+				"Admin Login": SmokeAdminLogin,
+				"Admin Auth":  SmokeAdminAuth,
 			},
 		},
 		{
@@ -46,10 +47,10 @@ func RunTests(context *util.Context) {
 				"Judge Login With Valid Code":               JudgeLoginWithValidCode,
 				"Judge Login With Invalid Code":             JudgeLoginWithInvalidCode,
 				"Add And Delete Judge":                      AddAndDeleteJudge,
-				"Edit Judge":                               EditJudge,
-				"Hide Judge":                               HideJudge,
-				"Judge Welcome Flow":                       JudgeWelcomeFlow,
-				"Judge Stats Reflect Additions":            JudgeStatsReflectAdditions,
+				"Edit Judge":                                EditJudge,
+				"Hide Judge":                                HideJudge,
+				"Judge Welcome Flow":                        JudgeWelcomeFlow,
+				"Judge Stats Reflect Additions":             JudgeStatsReflectAdditions,
 				"QR Check Empty Code Rejected":              QRCheckEmptyCodeRejected,
 				"QR Check Track Empty Code Rejected":        QRCheckTrackEmptyCodeRejected,
 				"QR Add Empty Code Does Not Create Judge":   QRAddEmptyCodeDoesNotCreateJudge,
@@ -69,10 +70,11 @@ func RunTests(context *util.Context) {
 				"Move Project To Table":           MoveProject,
 				"Public Project List Accessible":  PublicProjectListIsAccessible,
 				"Project Stats Reflect Additions": ProjectStatsReflectAdditions,
+				"Export By Challenges Zip":        ExportByChallengesZip,
 			},
 		},
 		{
-			Name: "Judging Workflow",
+			Name:  "Judging Workflow",
 			Setup: JudgingTestSetup,
 			Tests: map[string]func(*util.Context) util.Result{
 				"Judging Standard Path":          JudgingStandardPath,
@@ -82,6 +84,7 @@ func RunTests(context *util.Context) {
 				"Star Project":                   StarProject,
 				"Judge Notes Update":             JudgeNotesUpdate,
 				"Judge Next With No Projects":    JudgeNextWithNoActiveProjects,
+				"Concurrent Judges Get Projects": ConcurrentJudgesGetProjects,
 			},
 		},
 		{
@@ -95,15 +98,22 @@ func RunTests(context *util.Context) {
 				"Set Min Views":                       SetMinViews,
 				"Deliberation Toggle":                 DeliberationToggle,
 				"Block Reqs Toggle":                   BlockReqsToggle,
+				"Paused Next Does Not Deadlock":       PausedNextDoesNotDeadlock,
 			},
 		},
 		{
 			Name:  "Track Judging",
 			Setup: TrackTestSetup,
 			Tests: map[string]func(*util.Context) util.Result{
-				"Track Judges Rank And Get Track Scores":        TrackJudgesRankAndGetTrackScores,
+				"Track Judges Rank And Get Track Scores":         TrackJudgesRankAndGetTrackScores,
 				"General Judging Disabled Blocks General Judges": GeneralJudgingDisabledBlocksGeneralJudges,
 				"Track Judging Disabled Rejects Tracks":          TrackJudgingDisabledRejectsTracks,
+				"Tracks And General Run Together":                TracksAndGeneralRunTogether,
+				"Track Views Cap Is Enforced":                    TrackViewsCapIsEnforced,
+				"Tracks Stay Separate":                           TracksStaySeparate,
+				"QR Signup Assigns Track":                        QRSignupAssignsTrack,
+				"Judge CSV Validates Tracks":                     JudgeCsvValidatesTracks,
+				"Concurrent Track Judges Get Projects":           ConcurrentTrackJudgesGetProjects,
 			},
 		},
 	}
@@ -135,9 +145,16 @@ func RunTests(context *util.Context) {
 			time.Sleep(100 * time.Millisecond)
 		}
 
-		for name, test := range group.Tests {
+		// Run tests in name order so runs are repeatable (map order is random)
+		names := make([]string, 0, len(group.Tests))
+		for name := range group.Tests {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		for _, name := range names {
 			context.Logger.Log(util.Info, "Running test: %s\n", name)
-			res := test(context)
+			res := group.Tests[name](context)
 			if !res.Success {
 				context.Logger.Log(util.Error, "\tFAILED: %s\n", res.Message)
 				errors++

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
@@ -193,6 +194,52 @@ func DeleteRequestWithStatus(logger *Logger, url string, authHeader string) (int
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Log(Error, "Error sending DELETE request to %s: %s\n", url, err.Error())
+		return 0, err.Error()
+	}
+
+	defer res.Body.Close()
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		logger.Log(Error, "Error reading response body: %s\n", err.Error())
+		return res.StatusCode, err.Error()
+	}
+
+	logger.Log(Verbose, "Response (%d): %s\n", res.StatusCode, string(resBody))
+
+	return res.StatusCode, string(resBody)
+}
+
+// PostFileWithStatus sends a multipart form POST request with a file and extra form fields,
+// returning both the status code and body
+func PostFileWithStatus(logger *Logger, url string, fileField string, fileName string, fileContent string, fields map[string]string, authHeader string) (int, string) {
+	logger.Log(Verbose, "Sending multipart POST request to %s\n", url)
+
+	// Build the multipart body
+	body := &bytes.Buffer{}
+	w := multipart.NewWriter(body)
+	part, err := w.CreateFormFile(fileField, fileName)
+	if err != nil {
+		logger.Log(Error, "Error creating form file for POST request to %s: %s\n", url, err.Error())
+		return 0, err.Error()
+	}
+	part.Write([]byte(fileContent))
+	for key, value := range fields {
+		w.WriteField(key, value)
+	}
+	w.Close()
+
+	req, err := http.NewRequest("POST", getBaseUrl()+url, body)
+	if err != nil {
+		logger.Log(Error, "Error creating POST request to %s: %s\n", url, err.Error())
+		return 0, err.Error()
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logger.Log(Error, "Error sending POST request to %s: %s\n", url, err.Error())
 		return 0, err.Error()
 	}
 
