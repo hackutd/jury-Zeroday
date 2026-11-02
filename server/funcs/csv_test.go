@@ -79,8 +79,8 @@ func TestCreateChallengeProjectCSV(t *testing.T) {
 }
 
 // Header row from the 2025 Devpost PII export (custom questions shortened). Like the real export, only
-// Team Member 1's columns are named: other members are unlabeled cells past the end of the header
-const devpostPIIHeader = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email`
+// Team Member 1's columns are named, then a "..." column where the unlabeled members start
+const devpostPIIHeader = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email,...`
 
 func TestFindDevpostTeamColumns(t *testing.T) {
 	cols, extraFrom := findDevpostTeamColumns(readCSVRows(t, devpostPIIHeader)[0])
@@ -90,6 +90,12 @@ func TestFindDevpostTeamColumns(t *testing.T) {
 	}
 	if extraFrom != 24 {
 		t.Fatalf("expected unlabeled members to start at column 24, got %d", extraFrom)
+	}
+
+	// Same header without the "..." placeholder
+	noDots := readCSVRows(t, devpostPIIHeader)[0]
+	if _, extraFrom := findDevpostTeamColumns(noDots[:len(noDots)-1]); extraFrom != 24 {
+		t.Fatalf("expected unlabeled members to start at column 24 without the placeholder, got %d", extraFrom)
 	}
 
 	// The non-PII export has no team columns

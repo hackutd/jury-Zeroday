@@ -213,9 +213,10 @@ type devpostTeamCols struct {
 // findDevpostTeamColumns finds the submitter and team member columns by header name, since they come
 // after the hackathon's custom questions and move between exports. Returns nothing for the non-PII export.
 //
-// Devpost only names Team Member 1's columns: further members are unlabeled (first, last, email)
-// cells past the end of the header. When the last named member block ends the header, extraFrom is
-// the index those unlabeled blocks start at (otherwise -1).
+// Devpost only names Team Member 1's columns, followed by a "..." placeholder column: further members
+// are unlabeled (first, last, email) cells starting at that placeholder. When the last named member
+// block ends the header (optionally followed by "..."), extraFrom is the index those unlabeled
+// blocks start at (otherwise -1).
 func findDevpostTeamColumns(header []string) (cols []devpostTeamCols, extraFrom int) {
 	index := map[string]int{}
 	for i, h := range header {
@@ -244,7 +245,9 @@ func findDevpostTeamColumns(header []string) (cols []devpostTeamCols, extraFrom 
 		}
 		last, email := col(prefix+"last name"), col(prefix+"email")
 		cols = append(cols, devpostTeamCols{first, last, email})
-		if last == first+1 && email == first+2 && email == len(header)-1 {
+		endsHeader := email == len(header)-1 ||
+			(email == len(header)-2 && normalizeDevpostHeader(header[len(header)-1]) == "...")
+		if last == first+1 && email == first+2 && endsHeader {
 			extraFrom = email + 1
 		} else {
 			extraFrom = -1
