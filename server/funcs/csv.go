@@ -552,39 +552,56 @@ func CreateParticipantsCSV(projects []*models.Project) []byte {
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Location < sorted[j].Location })
 
 	// One name and one email column per member, sized to the biggest team
-	maxMembers := 0
-	for _, project := range sorted {
-		maxMembers = max(maxMembers, len(project.TeamMembers))
-	}
+	maxMembers := largestTeamSize(sorted)
 
 	// Write the header
 	header := []string{"Table", "Project", "Devpost"}
-	for i := 1; i <= maxMembers; i++ {
-		header = append(header, fmt.Sprintf("Member %d Name", i))
-	}
-	for i := 1; i <= maxMembers; i++ {
-		header = append(header, fmt.Sprintf("Member %d Email", i))
-	}
-	w.Write(header)
+	w.Write(append(header, teamMemberHeader(maxMembers)...))
 
-	// Write each project, leaving the extra member columns empty for smaller teams
+	// Write each project
 	for _, project := range sorted {
-		names := make([]string, maxMembers)
-		emails := make([]string, maxMembers)
-		for i, member := range project.TeamMembers {
-			names[i] = member.Name
-			emails[i] = member.Email
-		}
 		row := []string{fmt.Sprintf("%d", project.Location), project.Name, project.Url}
-		row = append(row, names...)
-		row = append(row, emails...)
-		w.Write(row)
+		w.Write(append(row, teamMemberCells(project, maxMembers)...))
 	}
 
 	// Flush the writer
 	w.Flush()
 
 	return csvBuffer.Bytes()
+}
+
+// largestTeamSize returns the number of members on the biggest team in the list of projects
+func largestTeamSize(projects []*models.Project) int {
+	maxMembers := 0
+	for _, project := range projects {
+		maxMembers = max(maxMembers, len(project.TeamMembers))
+	}
+	return maxMembers
+}
+
+// teamMemberHeader returns the team member column names: "Member 1 Name" to "Member N Name",
+// then "Member 1 Email" to "Member N Email", where N is maxMembers
+func teamMemberHeader(maxMembers int) []string {
+	header := []string{}
+	for i := 1; i <= maxMembers; i++ {
+		header = append(header, fmt.Sprintf("Member %d Name", i))
+	}
+	for i := 1; i <= maxMembers; i++ {
+		header = append(header, fmt.Sprintf("Member %d Email", i))
+	}
+	return header
+}
+
+// teamMemberCells returns a project's member names then emails, matching the columns of
+// teamMemberHeader(maxMembers). Smaller teams have their extra columns left empty.
+func teamMemberCells(project *models.Project, maxMembers int) []string {
+	names := make([]string, maxMembers)
+	emails := make([]string, maxMembers)
+	for i, member := range project.TeamMembers {
+		names[i] = member.Name
+		emails[i] = member.Email
+	}
+	return append(names, emails...)
 }
 
 // CreateProjectChallengeZip creates a zip file with a CSV for each challenge
