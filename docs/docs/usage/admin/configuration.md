@@ -57,12 +57,15 @@ In this section, you can toggle the multi-group judging and track judging option
 
 ### Export Data
 
-This section allows you to export data from Jury as a CSV. There are 4 groupings to export:
+This section allows you to export data from Jury as a CSV. There are 5 groupings to export:
 
 - **Export Judges** - Exports all judges
 - **Export Projects** - Exports all projects
 - **Export Rankings** - Exports only the judges and their individual rankings of projects
 - **Export by Challenges** - Exports a zip file, with each CSV file containing only the projects that submitted to a specific challenge; each CSV will be titled with that challenge name
+- **Export Participants** - Exports one row per project with every team member's name and email (the member columns are only filled in if projects were imported from the Devpost export _with_ personal info)
+
+Under the buttons, **Include team member names and emails in Export by Challenges** adds the same member name and email columns as Export Participants to every challenge CSV, after the usual Table, Name, Devpost and Try It Out columns. The download is named `challenge-projects-with-emails.zip` so it is easy to tell apart. The box is unchecked every time the page loads, so check it only when a sponsor actually needs to contact teams.
 
 ### Reset Data
 

@@ -60,7 +60,7 @@ func TestCreateChallengeProjectCSV(t *testing.T) {
 	p1 := models.NewProject("Second", 2, 1, "desc", "https://devpost.com/b", "", "", []string{"Nvidia"})
 	p2 := models.NewProject("First", 1, 1, "desc", "https://devpost.com/a", "https://a.app, https://github.com/a", "https://youtu.be/a", []string{"Nvidia"})
 
-	rows := readCSVRows(t, string(CreateChallengeProjectCSV([]*models.Project{p1, p2})))
+	rows := readCSVRows(t, string(CreateChallengeProjectCSV([]*models.Project{p1, p2}, false)))
 
 	if strings.Join(rows[0], ",") != "Table,Name,Devpost,Try It Out" {
 		t.Fatalf("unexpected header: %v", rows[0])
@@ -150,6 +150,35 @@ func TestParseDevpostTeam(t *testing.T) {
 	record[21], record[22], record[23] = "Keshav", "Taneja", "KESHAV@example.com"
 	if got := parseDevpostTeam(record[:24], cols, extraFrom); len(got) != 1 {
 		t.Fatalf("expected duplicate member to be dropped, got %v", got)
+	}
+}
+
+func TestCreateChallengeProjectCSVWithTeamMembers(t *testing.T) {
+	p1 := models.NewProject("Second", 20, 1, "desc", "https://devpost.com/b", "https://b.app", "", []string{"Nvidia"})
+	p1.TeamMembers = []models.TeamMember{{Name: "Ann A", Email: "ann@example.com"}}
+	p2 := models.NewProject("First", 10, 1, "desc", "https://devpost.com/a", "", "", []string{"Nvidia"})
+	p2.TeamMembers = []models.TeamMember{{Name: "Bob B", Email: "bob@example.com"}, {Name: "Cat C", Email: ""}}
+
+	// Same columns as without team members, then the participants export's member columns
+	rows := readCSVRows(t, string(CreateChallengeProjectCSV([]*models.Project{p1, p2}, true)))
+	want := [][]string{
+		{"Table", "Name", "Devpost", "Try It Out", "Member 1 Name", "Member 2 Name", "Member 1 Email", "Member 2 Email"},
+		{"10", "First", "https://devpost.com/a", "", "Bob B", "Cat C", "bob@example.com", ""},
+		{"20", "Second", "https://devpost.com/b", "https://b.app", "Ann A", "", "ann@example.com", ""},
+	}
+	if len(rows) != len(want) {
+		t.Fatalf("got %v, want %v", rows, want)
+	}
+	for i := range want {
+		if strings.Join(rows[i], "|") != strings.Join(want[i], "|") {
+			t.Fatalf("row %d: got %v, want %v", i, rows[i], want[i])
+		}
+	}
+
+	// Leaving team members out must not leak them
+	rows = readCSVRows(t, string(CreateChallengeProjectCSV([]*models.Project{p1, p2}, false)))
+	if strings.Join(rows[0], ",") != "Table,Name,Devpost,Try It Out" || len(rows[1]) != 4 {
+		t.Fatalf("expected no member columns, got %v", rows)
 	}
 }
 
