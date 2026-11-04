@@ -392,7 +392,7 @@ func ExportProjectsByChallenge(ctx *gin.Context) {
 	}
 
 	// Create the zip file
-	zipData, err := funcs.CreateProjectChallengeZip(projects)
+	zipData, err := funcs.CreateProjectChallengeZip(projects, false)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error creating zip file: " + err.Error()})
 		return

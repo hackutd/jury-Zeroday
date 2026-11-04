@@ -512,24 +512,34 @@ func CreateProjectCSV(projects []*models.Project) []byte {
 }
 
 // CreateChallengeProjectCSV creates a printable CSV of projects for a single challenge,
-// with only table, name, and project links (sized to print on A4 landscape), sorted by table number
-func CreateChallengeProjectCSV(projects []*models.Project) []byte {
+// with only table, name, and project links (sized to print on A4 landscape), sorted by table number.
+// If includeTeamMembers is true, each team member's name and email are added after the links, in the
+// same columns as the participants export (sized to the biggest team in this challenge). Contains PII.
+func CreateChallengeProjectCSV(projects []*models.Project, includeTeamMembers bool) []byte {
 	csvBuffer := &bytes.Buffer{}
 
 	// Create a new CSV writer
 	w := csv.NewWriter(csvBuffer)
-
-	// Write the header
-	w.Write([]string{"Table", "Name", "Devpost", "Try It Out"})
 
 	// Sort a copy of the projects by table number
 	sorted := make([]*models.Project, len(projects))
 	copy(sorted, projects)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Location < sorted[j].Location })
 
+	// No member columns at all unless they were asked for
+	maxMembers := 0
+	if includeTeamMembers {
+		maxMembers = largestTeamSize(sorted)
+	}
+
+	// Write the header
+	header := []string{"Table", "Name", "Devpost", "Try It Out"}
+	w.Write(append(header, teamMemberHeader(maxMembers)...))
+
 	// Write each project
 	for _, project := range sorted {
-		w.Write([]string{fmt.Sprintf("%d", project.Location), project.Name, project.Url, project.TryLink})
+		row := []string{fmt.Sprintf("%d", project.Location), project.Name, project.Url, project.TryLink}
+		w.Write(append(row, teamMemberCells(project, maxMembers)...))
 	}
 
 	// Flush the writer
@@ -593,19 +603,21 @@ func teamMemberHeader(maxMembers int) []string {
 }
 
 // teamMemberCells returns a project's member names then emails, matching the columns of
-// teamMemberHeader(maxMembers). Smaller teams have their extra columns left empty.
+// teamMemberHeader(maxMembers). Smaller teams have their extra columns left empty, and members past
+// maxMembers are left out (maxMembers is 0 when team members are not being exported).
 func teamMemberCells(project *models.Project, maxMembers int) []string {
 	names := make([]string, maxMembers)
 	emails := make([]string, maxMembers)
-	for i, member := range project.TeamMembers {
-		names[i] = member.Name
-		emails[i] = member.Email
+	for i := 0; i < maxMembers && i < len(project.TeamMembers); i++ {
+		names[i] = project.TeamMembers[i].Name
+		emails[i] = project.TeamMembers[i].Email
 	}
 	return append(names, emails...)
 }
 
-// CreateProjectChallengeZip creates a zip file with a CSV for each challenge
-func CreateProjectChallengeZip(projects []*models.Project) ([]byte, error) {
+// CreateProjectChallengeZip creates a zip file with a CSV for each challenge.
+// includeTeamMembers adds team member names and emails to every CSV (see CreateChallengeProjectCSV).
+func CreateProjectChallengeZip(projects []*models.Project, includeTeamMembers bool) ([]byte, error) {
 	csvList := [][]byte{}
 
 	// Get list of challenges
@@ -628,7 +640,7 @@ func CreateProjectChallengeZip(projects []*models.Project) ([]byte, error) {
 		}
 
 		// Create CSV for the challenge
-		csv := CreateChallengeProjectCSV(currChallengeProjects)
+		csv := CreateChallengeProjectCSV(currChallengeProjects, includeTeamMembers)
 		csvList = append(csvList, csv)
 	}
 
