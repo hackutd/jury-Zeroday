@@ -868,6 +868,7 @@ Exports projects as a CSV
 Exports projects by challenge as ZIP of CSVs
 
 -   **Auth**: admin
+-   **Query**: `team_members=true` (optional) to add each team member's name and email columns, same as the participants export. Any other value is ignored.
 -   **Response**: ZIP Blob
 
 ### GET /admin/export/rankings
