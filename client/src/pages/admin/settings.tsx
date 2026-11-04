@@ -90,6 +90,8 @@ const AdminSettings = () => {
     const [ignoreTracks, setIgnoreTracks] = useState<string>('');
     const [maxReqPerMin, setMaxReqPerMin] = useState(100);
     const [blockReqs, setBlockReqs] = useState(false);
+    // Not saved, so team member emails are never in the challenge export unless picked each time
+    const [challengeExportTeamMembers, setChallengeExportTeamMembers] = useState(false);
     const [resetPopup, setResetPopup] = useState<ResetPopup>({
         open: false,
         text: '',
@@ -533,7 +535,9 @@ const AdminSettings = () => {
     };
 
     const exportByChallenge = async () => {
-        const res = await fetch(`${import.meta.env.VITE_JURY_URL}/admin/export/challenges`, {
+        const query = challengeExportTeamMembers ? '?team_members=true' : '';
+        const url = `${import.meta.env.VITE_JURY_URL}/admin/export/challenges${query}`;
+        const res = await fetch(url, {
             method: 'GET',
             headers: createHeaders('admin', false),
         });
@@ -545,7 +549,10 @@ const AdminSettings = () => {
             return;
         }
 
-        saveToFile((await res.blob()) as Blob, 'challenge-projects', 'zip');
+        const fileName = challengeExportTeamMembers
+            ? 'challenge-projects-with-emails'
+            : 'challenge-projects';
+        saveToFile((await res.blob()) as Blob, fileName, 'zip');
     };
 
     const saveToFile = (blob: Blob, name: string, ext: string) => {
@@ -950,7 +957,8 @@ const AdminSettings = () => {
                     <Description>
                         Export each collection individually as a CSV download. Export Participants
                         includes every team member&apos;s name and email (from the Devpost PII
-                        export), so don&apos;t share it with participants.
+                        export), so don&apos;t share it with participants. Export by Challenges only
+                        includes them if the box below is checked.
                     </Description>
                     <div className="flex flex-col lg:flex-row mt-2 lg:mt-0 gap-4">
                         <SettingsButton
@@ -981,6 +989,12 @@ const AdminSettings = () => {
                             Export Rankings
                         </SettingsButton>
                     </div>
+                    <Checkbox
+                        checked={challengeExportTeamMembers}
+                        onChange={setChallengeExportTeamMembers}
+                    >
+                        Include team member names and emails in Export by Challenges
+                    </Checkbox>
                 </Card>
 
                 <Card>
