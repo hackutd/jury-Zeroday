@@ -13,6 +13,30 @@ import (
 
 // --- Export Tests ---
 
+// readZipCSVs reads every CSV in a zip file, keyed by file name
+func readZipCSVs(body string) (map[string][][]string, error) {
+	r, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len(body)))
+	if err != nil {
+		return nil, fmt.Errorf("not a valid zip: %s", err.Error())
+	}
+
+	files := map[string][][]string{}
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return nil, fmt.Errorf("could not open %s: %s", f.Name, err.Error())
+		}
+		content, _ := io.ReadAll(rc)
+		rc.Close()
+		rows, err := csv.NewReader(bytes.NewReader(content)).ReadAll()
+		if err != nil {
+			return nil, fmt.Errorf("could not parse %s: %s", f.Name, err.Error())
+		}
+		files[f.Name] = rows
+	}
+	return files, nil
+}
+
 // ExportByChallengesZip verifies that the export by challenges zip has one CSV per prize,
 // each with the Table, Name, Devpost, Try It Out columns and sorted by table number
 func ExportByChallengesZip(context *util.Context) util.Result {
@@ -38,25 +62,9 @@ func ExportByChallengesZip(context *util.Context) util.Result {
 	if status != 200 {
 		return util.NewResult(false, fmt.Sprintf("Export by challenges failed (%d): %s", status, body))
 	}
-	r, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len(body)))
+	files, err := readZipCSVs(body)
 	if err != nil {
-		return util.NewResult(false, "Export by challenges is not a valid zip: "+err.Error())
-	}
-
-	// Read every CSV in the zip
-	files := map[string][][]string{}
-	for _, f := range r.File {
-		rc, err := f.Open()
-		if err != nil {
-			return util.NewResult(false, "Could not open "+f.Name+": "+err.Error())
-		}
-		content, _ := io.ReadAll(rc)
-		rc.Close()
-		rows, err := csv.NewReader(bytes.NewReader(content)).ReadAll()
-		if err != nil {
-			return util.NewResult(false, "Could not parse "+f.Name+": "+err.Error())
-		}
-		files[f.Name] = rows
+		return util.NewResult(false, "Could not read export by challenges zip: "+err.Error())
 	}
 
 	want := map[string][][]string{
@@ -157,6 +165,62 @@ func ExportParticipantsCSV(context *util.Context) util.Result {
 		_, listBody := util.GetRequestWithStatus(context.Logger, url, util.AdminAuth())
 		if strings.Contains(listBody, "@example.com") {
 			return util.NewResult(false, url+" should not include team member emails")
+		}
+	}
+	return util.ResultOk()
+}
+
+// ExportByChallengesWithTeamMembers verifies that ?team_members=true adds the participants export's
+// member name and email columns to each prize CSV, and that they are left out without it
+func ExportByChallengesWithTeamMembers(context *util.Context) util.Result {
+	if res := resetProjects(context); !res.Success {
+		return res
+	}
+	status, body := util.PostFileWithStatus(context.Logger, "/project/devpost", "csv", "devpost.csv", devpostPIICSV, nil, util.AdminAuth())
+	if status != 200 || !util.IsOk(body) {
+		return util.NewResult(false, fmt.Sprintf("Devpost PII import failed (%d): %s", status, body))
+	}
+
+	// With team members: only Team Project opted into a prize (Design)
+	status, body = util.GetRequestWithStatus(context.Logger, "/admin/export/challenges?team_members=true", util.AdminAuth())
+	if status != 200 {
+		return util.NewResult(false, fmt.Sprintf("Export by challenges with team members failed (%d): %s", status, body))
+	}
+	files, err := readZipCSVs(body)
+	if err != nil {
+		return util.NewResult(false, "Could not read export by challenges zip: "+err.Error())
+	}
+	rows, ok := files["Design.csv"]
+	if !ok || len(files) != 1 {
+		return util.NewResult(false, fmt.Sprintf("Expected only Design.csv in export zip, got %v", files))
+	}
+	if len(rows) != 2 || len(rows[1]) == 0 {
+		return util.NewResult(false, fmt.Sprintf("Design.csv should have a header and 1 project, got %v", rows))
+	}
+	want := [][]string{
+		{"Table", "Name", "Devpost", "Try It Out", "Member 1 Name", "Member 2 Name", "Member 3 Name", "Member 1 Email", "Member 2 Email", "Member 3 Email"},
+		// Table number is whatever the import assigned
+		{rows[1][0], "Team Project", "https://devpost.com/1-team", "", "Ann Lee", "Bob Kim", "carlusername", "ann@example.com", "bob@example.com", "carl@example.com"},
+	}
+	for i := range want {
+		if !slices.Equal(rows[i], want[i]) {
+			return util.NewResult(false, fmt.Sprintf("Design.csv row %d should be %v, got %v", i, want[i], rows[i]))
+		}
+	}
+
+	// Without the param (or with anything other than "true") no emails are exported
+	for _, url := range []string{"/admin/export/challenges", "/admin/export/challenges?team_members=1"} {
+		status, body = util.GetRequestWithStatus(context.Logger, url, util.AdminAuth())
+		if status != 200 {
+			return util.NewResult(false, fmt.Sprintf("%s failed (%d): %s", url, status, body))
+		}
+		files, err = readZipCSVs(body)
+		if err != nil {
+			return util.NewResult(false, "Could not read export by challenges zip: "+err.Error())
+		}
+		rows := files["Design.csv"]
+		if len(rows) == 0 || !slices.Equal(rows[0], []string{"Table", "Name", "Devpost", "Try It Out"}) {
+			return util.NewResult(false, fmt.Sprintf("%s should not include team member columns, got %v", url, rows))
 		}
 	}
 	return util.ResultOk()
