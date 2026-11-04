@@ -378,11 +378,15 @@ func ExportParticipants(ctx *gin.Context) {
 	funcs.AddCsvData("participants", csvData, ctx)
 }
 
-// POST /admin/export/challenges - ExportProjectsByChallenge exports all projects to a zip file, with CSVs each
-// containing projects that only belong to a single challenge
+// GET /admin/export/challenges - ExportProjectsByChallenge exports all projects to a zip file, with CSVs each
+// containing projects that only belong to a single challenge. Add ?team_members=true to also include every
+// team member's name and email (same columns as the participants export).
 func ExportProjectsByChallenge(ctx *gin.Context) {
 	// Get the state from the context
 	state := GetState(ctx)
+
+	// Team members are PII, so leave them out unless explicitly asked for
+	includeTeamMembers := ctx.Query("team_members") == "true"
 
 	// Get all the projects
 	projects, err := database.FindAllProjects(state.Db, ctx)
@@ -392,13 +396,18 @@ func ExportProjectsByChallenge(ctx *gin.Context) {
 	}
 
 	// Create the zip file
-	zipData, err := funcs.CreateProjectChallengeZip(projects, false)
+	zipData, err := funcs.CreateProjectChallengeZip(projects, includeTeamMembers)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error creating zip file: " + err.Error()})
 		return
 	}
 
 	// Send zip file
+	if includeTeamMembers {
+		state.Logger.AdminLogf("Exported projects by challenge to CSV, with team member names and emails")
+		funcs.AddZipFile("projects-with-emails", zipData, ctx)
+		return
+	}
 	state.Logger.AdminLogf("Exported projects by challenge to CSV")
 	funcs.AddZipFile("projects", zipData, ctx)
 }
