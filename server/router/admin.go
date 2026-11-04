@@ -357,6 +357,27 @@ func ExportProjects(ctx *gin.Context) {
 	funcs.AddCsvData("projects", csvData, ctx)
 }
 
+// GET /admin/export/participants - ExportParticipants exports every project's team members and
+// their emails to a CSV (one row per project), for emailing teams their table
+func ExportParticipants(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get all the projects
+	projects, err := database.FindAllProjects(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
+		return
+	}
+
+	// Create the CSV
+	csvData := funcs.CreateParticipantsCSV(projects)
+
+	// Send CSV
+	state.Logger.AdminLogf("Exported participants (team member names and emails) to CSV")
+	funcs.AddCsvData("participants", csvData, ctx)
+}
+
 // POST /admin/export/challenges - ExportProjectsByChallenge exports all projects to a zip file, with CSVs each
 // containing projects that only belong to a single challenge
 func ExportProjectsByChallenge(ctx *gin.Context) {

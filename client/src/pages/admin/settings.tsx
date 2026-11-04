@@ -948,7 +948,9 @@ const AdminSettings = () => {
 
                     <SubSection>Export Collection</SubSection>
                     <Description>
-                        Export each collection individually as a CSV download.
+                        Export each collection individually as a CSV download. Export Participants
+                        includes every team member&apos;s name and email (from the Devpost PII
+                        export), so don&apos;t share it with participants.
                     </Description>
                     <div className="flex flex-col lg:flex-row mt-2 lg:mt-0 gap-4">
                         <SettingsButton
@@ -965,6 +967,12 @@ const AdminSettings = () => {
                         </SettingsButton>
                         <SettingsButton onClick={exportByChallenge} className="my-0 lg:my-2">
                             Export by Challenges
+                        </SettingsButton>
+                        <SettingsButton
+                            onClick={() => exportCsv('participants')}
+                            className="my-0 lg:my-2"
+                        >
+                            Export Participants
                         </SettingsButton>
                         <SettingsButton
                             onClick={() => exportCsv('rankings')}

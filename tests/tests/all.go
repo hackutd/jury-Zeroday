@@ -71,6 +71,7 @@ func RunTests(context *util.Context) {
 				"Public Project List Accessible":  PublicProjectListIsAccessible,
 				"Project Stats Reflect Additions": ProjectStatsReflectAdditions,
 				"Export By Challenges Zip":        ExportByChallengesZip,
+				"Export Participants CSV":         ExportParticipantsCSV,
 			},
 		},
 		{
