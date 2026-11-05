@@ -225,3 +225,59 @@ func ExportByChallengesWithTeamMembers(context *util.Context) util.Result {
 	}
 	return util.ResultOk()
 }
+
+// ExportDiscordCSV verifies that /admin/export/discord lists each project's table, name and Devpost
+// URL sorted alphabetically by name (ignoring case), without team member emails, and is admin only
+func ExportDiscordCSV(context *util.Context) util.Result {
+	if res := resetProjects(context); !res.Success {
+		return res
+	}
+	status, body := util.PostFileWithStatus(context.Logger, "/project/devpost", "csv", "devpost.csv", devpostPIICSV, nil, util.AdminAuth())
+	if status != 200 || !util.IsOk(body) {
+		return util.NewResult(false, fmt.Sprintf("Devpost PII import failed (%d): %s", status, body))
+	}
+	addTestProject(context, "alpha Project", "")
+
+	// Put the projects in reverse alphabetical table order so sorting by name is actually checked
+	ids, res := getProjectIDs(context, "alpha Project", "Solo Project", "Team Project")
+	if !res.Success {
+		return res
+	}
+	for i, location := range []int{30, 20, 10} {
+		if moveRes := util.PutRequest(context.Logger, "/project/move/"+ids[i], util.H{"location": location}, util.AdminAuth()); !util.IsOk(moveRes) {
+			return util.NewResult(false, "Failed to move project: "+moveRes)
+		}
+	}
+
+	status, body = util.GetRequestWithStatus(context.Logger, "/admin/export/discord", util.AdminAuth())
+	if status != 200 {
+		return util.NewResult(false, fmt.Sprintf("Export for Discord failed (%d): %s", status, body))
+	}
+	if strings.Contains(body, "@example.com") {
+		return util.NewResult(false, "Discord export should not include team member emails")
+	}
+	rows, err := csv.NewReader(bytes.NewReader([]byte(body))).ReadAll()
+	if err != nil {
+		return util.NewResult(false, "Could not parse Discord CSV: "+err.Error())
+	}
+	want := [][]string{
+		{"Table", "Project", "Devpost"},
+		{"30", "alpha Project", "https://example.com"},
+		{"20", "Solo Project", "https://devpost.com/2-solo"},
+		{"10", "Team Project", "https://devpost.com/1-team"},
+	}
+	if len(rows) != len(want) {
+		return util.NewResult(false, fmt.Sprintf("Discord CSV should have %d rows, got %v", len(want), rows))
+	}
+	for i := range want {
+		if !slices.Equal(rows[i], want[i]) {
+			return util.NewResult(false, fmt.Sprintf("Discord CSV row %d should be %v, got %v", i, want[i], rows[i]))
+		}
+	}
+
+	// The export is admin only
+	if status, _ := util.GetRequestWithStatus(context.Logger, "/admin/export/discord", util.DefaultAuth()); status == 200 {
+		return util.NewResult(false, "Discord export must require admin auth")
+	}
+	return util.ResultOk()
+}

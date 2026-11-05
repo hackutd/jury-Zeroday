@@ -983,6 +983,12 @@ const AdminSettings = () => {
                             Export Participants
                         </SettingsButton>
                         <SettingsButton
+                            onClick={() => exportCsv('discord')}
+                            className="my-0 lg:my-2"
+                        >
+                            Export for Discord
+                        </SettingsButton>
+                        <SettingsButton
                             onClick={() => exportCsv('rankings')}
                             className="my-0 lg:my-2"
                         >
