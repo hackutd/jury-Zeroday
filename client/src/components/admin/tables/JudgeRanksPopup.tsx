@@ -29,14 +29,6 @@ const JudgeRanksPopup = (props: JudgeRanksPopupProps) => {
                         {idx + 1}. {projEntryFromId(id)}
                     </p>
                 ))}
-                <h1 className="text-primary text-2xl font-bold mt-4">Stars</h1>
-                {props.judge.seen_projects
-                    .filter((p) => p.starred)
-                    .map((proj, idx) => (
-                        <p key={idx} className="text-light">
-                            {projEntryFromId(proj.project_id)}
-                        </p>
-                    ))}
             </div>
         </InfoPopup>
     );

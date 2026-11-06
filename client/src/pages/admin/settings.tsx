@@ -1048,16 +1048,16 @@ const AdminSettings = () => {
                 <Card>
                     <Section>Reset Data</Section>
 
-                    <SubSection>Clear Rankings and Stars</SubSection>
+                    <SubSection>Clear Rankings</SubSection>
                     <Description>
-                        Removes ALL rankings that judges have made. This will not change anything
-                        else but remove all judges' rankings and stars for projects.
+                        Removes ALL rankings that judges have made, including prize rankings. This
+                        will not change anything else.
                     </Description>
                     <SettingsButton
                         onClick={() =>
                             setResetPopup({
                                 open: true,
-                                text: 'Are you sure you want to delete all ranking data? This includes rankings and stars of ALL judges!',
+                                text: 'Are you sure you want to delete all ranking data? This includes the general and prize rankings of ALL judges!',
                                 handler: reset.bind(this, 'rankings'),
                             })
                         }
