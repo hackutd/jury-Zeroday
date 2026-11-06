@@ -580,7 +580,7 @@ func CreateParticipantsCSV(projects []*models.Project) []byte {
 	return csvBuffer.Bytes()
 }
 
-// CreateDiscordCSV creates a CSV with every project's table number, name and Devpost URL, sorted
+// CreateDiscordCSV creates a CSV with every project's name, table number and Devpost URL, sorted
 // alphabetically by project name (ignoring case, ties broken by table number), so hackers can find
 // their table in a list posted to Discord. Contains no PII.
 func CreateDiscordCSV(projects []*models.Project) []byte {
@@ -601,11 +601,11 @@ func CreateDiscordCSV(projects []*models.Project) []byte {
 	})
 
 	// Write the header
-	w.Write([]string{"Table", "Project", "Devpost"})
+	w.Write([]string{"Project", "Table", "Devpost"})
 
 	// Write each project
 	for _, project := range sorted {
-		w.Write([]string{fmt.Sprintf("%d", project.Location), project.Name, project.Url})
+		w.Write([]string{project.Name, fmt.Sprintf("%d", project.Location), project.Url})
 	}
 
 	// Flush the writer

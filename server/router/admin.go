@@ -378,7 +378,7 @@ func ExportParticipants(ctx *gin.Context) {
 	funcs.AddCsvData("participants", csvData, ctx)
 }
 
-// GET /admin/export/discord - ExportDiscord exports every project's table number, name and Devpost
+// GET /admin/export/discord - ExportDiscord exports every project's name, table number and Devpost
 // URL to a CSV, sorted alphabetically by project name, for posting to Discord
 func ExportDiscord(ctx *gin.Context) {
 	// Get the state from the context

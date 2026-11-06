@@ -217,11 +217,11 @@ func TestCreateDiscordCSV(t *testing.T) {
 	rows := readCSVRows(t, string(CreateDiscordCSV([]*models.Project{zebra, apple, bananaLate, bananaEarly})))
 	// Alphabetical ignoring case, same names ordered by table, and no team member columns
 	want := [][]string{
-		{"Table", "Project", "Devpost"},
-		{"30", "apple", "https://devpost.com/a"},
-		{"5", "Banana", "https://devpost.com/b1"},
-		{"20", "Banana", "https://devpost.com/b2"},
-		{"1", "Zebra", "https://devpost.com/z"},
+		{"Project", "Table", "Devpost"},
+		{"apple", "30", "https://devpost.com/a"},
+		{"Banana", "5", "https://devpost.com/b1"},
+		{"Banana", "20", "https://devpost.com/b2"},
+		{"Zebra", "1", "https://devpost.com/z"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("got %v, want %v", rows, want)

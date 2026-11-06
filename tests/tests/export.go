@@ -226,7 +226,7 @@ func ExportByChallengesWithTeamMembers(context *util.Context) util.Result {
 	return util.ResultOk()
 }
 
-// ExportDiscordCSV verifies that /admin/export/discord lists each project's table, name and Devpost
+// ExportDiscordCSV verifies that /admin/export/discord lists each project's name, table and Devpost
 // URL sorted alphabetically by name (ignoring case), without team member emails, and is admin only
 func ExportDiscordCSV(context *util.Context) util.Result {
 	if res := resetProjects(context); !res.Success {
@@ -261,10 +261,10 @@ func ExportDiscordCSV(context *util.Context) util.Result {
 		return util.NewResult(false, "Could not parse Discord CSV: "+err.Error())
 	}
 	want := [][]string{
-		{"Table", "Project", "Devpost"},
-		{"30", "alpha Project", "https://example.com"},
-		{"20", "Solo Project", "https://devpost.com/2-solo"},
-		{"10", "Team Project", "https://devpost.com/1-team"},
+		{"Project", "Table", "Devpost"},
+		{"alpha Project", "30", "https://example.com"},
+		{"Solo Project", "20", "https://devpost.com/2-solo"},
+		{"Team Project", "10", "https://devpost.com/1-team"},
 	}
 	if len(rows) != len(want) {
 		return util.NewResult(false, fmt.Sprintf("Discord CSV should have %d rows, got %v", len(want), rows))

@@ -874,7 +874,7 @@ Exports projects by challenge as ZIP of CSVs
 
 ### GET /admin/export/discord
 
-Exports every project's table number, name and Devpost URL as a CSV (`Table, Project, Devpost`), sorted alphabetically by project name ignoring case
+Exports every project's name, table number and Devpost URL as a CSV (`Project, Table, Devpost`), sorted alphabetically by project name ignoring case
 
 -   **Auth**: admin
 -   **Response**: CSV Blob
