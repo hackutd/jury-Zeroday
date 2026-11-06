@@ -159,7 +159,7 @@ func TestCreateChallengeProjectCSVWithTeamMembers(t *testing.T) {
 	p2 := models.NewProject("First", 10, 1, "desc", "https://devpost.com/a", "", "", []string{"Nvidia"})
 	p2.TeamMembers = []models.TeamMember{{Name: "Bob B", Email: "bob@example.com"}, {Name: "Cat C", Email: ""}}
 
-	// Same columns as without team members, then the participants export's member columns
+	// Same columns as without team members, then the member name and email columns
 	rows := readCSVRows(t, string(CreateChallengeProjectCSV([]*models.Project{p1, p2}, true)))
 	want := [][]string{
 		{"Table", "Name", "Devpost", "Try It Out", "Member 1 Name", "Member 2 Name", "Member 1 Email", "Member 2 Email"},
@@ -190,12 +190,13 @@ func TestCreateParticipantsCSV(t *testing.T) {
 	p3 := models.NewProject("Third", 30, 1, "desc", "https://devpost.com/c", "", "", []string{})
 	p3.TeamMembers = nil // imported before team members existed
 
+	// Only table, project and Devpost link, sorted by table: team members are never included
 	rows := readCSVRows(t, string(CreateParticipantsCSV([]*models.Project{p1, p2, p3})))
 	want := [][]string{
-		{"Table", "Project", "Devpost", "Member 1 Name", "Member 2 Name", "Member 1 Email", "Member 2 Email"},
-		{"10", "First", "https://devpost.com/a", "Bob B", "Cat C", "bob@example.com", ""},
-		{"20", "Second", "https://devpost.com/b", "Ann A", "", "ann@example.com", ""},
-		{"30", "Third", "https://devpost.com/c", "", "", "", ""},
+		{"Table", "Project", "Devpost"},
+		{"10", "First", "https://devpost.com/a"},
+		{"20", "Second", "https://devpost.com/b"},
+		{"30", "Third", "https://devpost.com/c"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("got %v, want %v", rows, want)

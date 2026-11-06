@@ -358,8 +358,8 @@ func ExportProjects(ctx *gin.Context) {
 	funcs.AddCsvData("projects", csvData, ctx)
 }
 
-// GET /admin/export/participants - ExportParticipants exports every project's team members and
-// their emails to a CSV (one row per project), for emailing teams their table
+// GET /admin/export/participants - ExportParticipants exports every project's table number, name
+// and Devpost link to a CSV (one row per project, sorted by table). No team members or emails.
 func ExportParticipants(ctx *gin.Context) {
 	// Get the state from the context
 	state := GetState(ctx)
@@ -375,7 +375,7 @@ func ExportParticipants(ctx *gin.Context) {
 	csvData := funcs.CreateParticipantsCSV(projects)
 
 	// Send CSV
-	state.Logger.AdminLogf("Exported participants (team member names and emails) to CSV")
+	state.Logger.AdminLogf("Exported participants (table, project and Devpost link) to CSV")
 	funcs.AddCsvData("participants", csvData, ctx)
 }
 
