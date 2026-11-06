@@ -51,7 +51,6 @@ const JudgeLive = () => {
     const [audioPopupOpen, setAudioPopupOpen] = useState(false);
     const [paused, setPaused] = useState(false);
     const [notes, setNotes] = useState('');
-    const [starred, setStarred] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -259,7 +258,6 @@ const JudgeLive = () => {
     const finishJudging = async () => {
         const res = await postRequest<OkResponse>('/judge/finish', 'judge', {
             notes,
-            starred,
         });
         if (res.status !== 200) {
             errorAlert(res);
@@ -431,8 +429,6 @@ const JudgeLive = () => {
                     callback={finishJudging}
                     notes={notes}
                     setNotes={setNotes}
-                    starred={starred}
-                    setStarred={setStarred}
                 />
                 <FlagPopup
                     enabled={flagPopup}

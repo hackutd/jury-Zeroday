@@ -7,11 +7,10 @@ type RankItemProps = {
     isDragging?: boolean;
     ranking: number;
     disabled?: boolean;
-    noStar?: boolean;
 } & React.HTMLAttributes<HTMLDivElement>;
 
 const RankItem = forwardRef<HTMLDivElement, RankItemProps>(
-    ({ item, isOpacityEnabled, isDragging, style, noStar, ...props }, ref) => {
+    ({ item, isOpacityEnabled, isDragging, style, ...props }, ref) => {
         const styles: CSSProperties = {
             opacity: isOpacityEnabled ? 0.5 : 1,
             cursor: isDragging ? 'grabbing' : 'grab',
@@ -26,7 +25,6 @@ const RankItem = forwardRef<HTMLDivElement, RankItemProps>(
                     project={item}
                     ranking={props.ranking === 0 ? -1 : props.ranking}
                     disabled={props.disabled}
-                    noStar={noStar}
                 />
             </div>
         );

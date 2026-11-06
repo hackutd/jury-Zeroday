@@ -194,8 +194,7 @@ const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
         >
             {deliberation && (
                 <p className="p-2 text-center mt-4 m-2 border-gold border-2 bg-gold/20 rounded-md">
-                    Deliberation has started. You cannot change rankings
-                    {prize ? '' : ' or stars'}.
+                    Deliberation has started. You cannot change rankings.
                 </p>
             )}
             <h2 className="text-primary text-xl font-bold mt-4">
@@ -210,7 +209,6 @@ const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
                 projects={ranked}
                 active={activeDropzone}
                 disabled={disabled || deliberation}
-                noStar={!!prize}
             />
 
             <h2 className="text-primary text-xl font-bold mt-4">Unranked Projects</h2>
@@ -223,7 +221,6 @@ const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
                 projects={unranked}
                 active={activeDropzone}
                 disabled={deliberation}
-                noStar={!!prize}
             />
 
             <DragOverlay>
@@ -235,7 +232,6 @@ const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
                         }
                         ranking={ranked.findIndex((p) => p.id === activeId) + 1}
                         disabled={deliberation}
-                        noStar={!!prize}
                     />
                 ) : null}
             </DragOverlay>

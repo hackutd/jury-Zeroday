@@ -8,7 +8,6 @@ interface DroppableProps {
     projects: SortableJudgedProject[];
     active: string | null;
     disabled?: boolean;
-    noStar?: boolean;
     children?: React.ReactNode;
 }
 
@@ -35,7 +34,6 @@ const Droppable = (props: DroppableProps) => {
                         item={p}
                         ranking={props.id === 'ranked' ? i + 1 : -1}
                         disabled={props.disabled}
-                        noStar={props.noStar}
                     />
                 ))}
             </div>

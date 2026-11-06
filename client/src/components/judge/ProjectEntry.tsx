@@ -1,30 +1,15 @@
 import { twMerge } from 'tailwind-merge';
 import DragHamburger from './dnd/DragHamburger';
-import Star from './Star';
-import { useEffect, useState } from 'react';
-import { putRequest } from '../../api';
-import { errorAlert } from '../../util';
 
 interface ProjectEntryProps {
     project: SortableJudgedProject;
     ranking: number;
     id: number;
-    starCallback?: (id: number, starred: boolean) => void;
     noDrag?: boolean;
-    /* Hide the star, eg. on prize rankings, where stars don't apply */
-    noStar?: boolean;
     disabled?: boolean;
 }
 
 const ProjectEntry = (props: ProjectEntryProps) => {
-    const [starred, setStarred] = useState(props.project.starred);
-
-    useEffect(() => {
-        if (!props.project) return;
-
-        setStarred(props.project.starred);
-    }, [props.project]);
-
     if (!props.project) {
         return null;
     }
@@ -43,29 +28,6 @@ const ProjectEntry = (props: ProjectEntryProps) => {
         default:
             break;
     }
-
-    const updateStar = async () => {
-        const res = await putRequest<OkResponse>(
-            `/judge/star/${props.project.project_id}`,
-            'judge',
-            {
-                starred: !starred,
-            }
-        );
-        if (res.status !== 200) {
-            // If deliberation, reload page
-            if (res.error.indexOf('deliberation') !== -1) {
-                window.location.reload();
-            }
-
-            errorAlert(res);
-            return;
-        }
-
-        if (props.starCallback) {
-            props.starCallback(props.id, !starred);
-        }
-    };
 
     return (
         <div className="flex items-center cursor-default">
@@ -86,15 +48,6 @@ const ProjectEntry = (props: ProjectEntryProps) => {
                         </h3>
                         <p className="text-light text-xs line-clamp-1">{props.project.notes}</p>
                     </div>
-                    {!props.noStar && (
-                        <Star
-                            small
-                            active={starred}
-                            setActive={setStarred}
-                            onClick={updateStar}
-                            disabled={props.disabled}
-                        />
-                    )}
                     {!props.noDrag ? (
                         <div className="text-right flex items-center justify-end">
                             <DragHamburger />
