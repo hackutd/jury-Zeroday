@@ -206,3 +206,29 @@ func TestCreateParticipantsCSV(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateDiscordCSV(t *testing.T) {
+	zebra := models.NewProject("Zebra", 1, 1, "desc", "https://devpost.com/z", "", "", []string{})
+	zebra.TeamMembers = []models.TeamMember{{Name: "Ann A", Email: "ann@example.com"}}
+	apple := models.NewProject("apple", 30, 1, "desc", "https://devpost.com/a", "", "", []string{})
+	bananaLate := models.NewProject("Banana", 20, 1, "desc", "https://devpost.com/b2", "", "", []string{})
+	bananaEarly := models.NewProject("Banana", 5, 1, "desc", "https://devpost.com/b1", "", "", []string{})
+
+	rows := readCSVRows(t, string(CreateDiscordCSV([]*models.Project{zebra, apple, bananaLate, bananaEarly})))
+	// Alphabetical ignoring case, same names ordered by table, and no team member columns
+	want := [][]string{
+		{"Project", "Table", "Devpost"},
+		{"apple", "30", "https://devpost.com/a"},
+		{"Banana", "5", "https://devpost.com/b1"},
+		{"Banana", "20", "https://devpost.com/b2"},
+		{"Zebra", "1", "https://devpost.com/z"},
+	}
+	if len(rows) != len(want) {
+		t.Fatalf("got %v, want %v", rows, want)
+	}
+	for i := range want {
+		if strings.Join(rows[i], "|") != strings.Join(want[i], "|") {
+			t.Fatalf("row %d: got %v, want %v", i, rows[i], want[i])
+		}
+	}
+}

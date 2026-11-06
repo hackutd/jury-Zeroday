@@ -76,6 +76,7 @@ All routes are listed in `server/router/init.go` with their respective handlers.
 | [/admin/export/judges](#get-adminexportjudges)         | GET    | admin | Exports judges as a CSV                      |
 | [/admin/export/projects](#get-adminexportprojects)     | GET    | admin | Exports projects as a CSV                    |
 | [/admin/export/challenges](#get-adminexportchallenges) | GET    | admin | Exports projects by challenge as ZIP of CSVs |
+| [/admin/export/discord](#get-adminexportdiscord)       | GET    | admin | Exports projects A-Z for Discord as a CSV    |
 | [/admin/export/rankings](#get-adminexportrankings)     | GET    | admin | Exports a list of rankings for each judge    |
 | [/judge/hide/:id](#put-judgehideid)                    | PUT    | admin | Hides a judge                                |
 | [/project/hide/:id](#put-projecthideid)                | PUT    | admin | Hides a project                              |
@@ -870,6 +871,13 @@ Exports projects by challenge as ZIP of CSVs
 -   **Auth**: admin
 -   **Query**: `team_members=true` (optional) to add each team member's name and email columns, same as the participants export. Any other value is ignored.
 -   **Response**: ZIP Blob
+
+### GET /admin/export/discord
+
+Exports every project's name, table number and Devpost URL as a CSV (`Project, Table, Devpost`), sorted alphabetically by project name ignoring case
+
+-   **Auth**: admin
+-   **Response**: CSV Blob
 
 ### GET /admin/export/rankings
 
