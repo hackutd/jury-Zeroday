@@ -135,16 +135,17 @@ func DropJudgingData(db *mongo.Database) error {
 		context.Background(),
 		gin.H{},
 		gin.H{"$set": gin.H{
-			"active":        true,
-			"current":       nil,
-			"last_location": -1,
-			"seen":          0,
-			"group_seen":    0,
-			"read_welcome":  false,
-			"seen_projects": []models.JudgedProject{},
-			"rankings":      []primitive.ObjectID{},
-			"rankings_agg":  []models.AggRanking{},
-			"flagged":       []primitive.ObjectID{},
+			"active":         true,
+			"current":        nil,
+			"last_location":  -1,
+			"seen":           0,
+			"group_seen":     0,
+			"read_welcome":   false,
+			"seen_projects":  []models.JudgedProject{},
+			"rankings":       []primitive.ObjectID{},
+			"rankings_agg":   []models.AggRanking{},
+			"flagged":        []primitive.ObjectID{},
+			"prize_rankings": []models.PrizeRanking{},
 		}},
 	)
 	if err != nil {
@@ -192,6 +193,7 @@ func DropRankings(db *mongo.Database) error {
 		gin.H{"$set": gin.H{
 			"rankings":                  []primitive.ObjectID{},
 			"rankings_agg":              []models.AggRanking{},
+			"prize_rankings":            []models.PrizeRanking{},
 			"seen_projects.$[].starred": false,
 		}},
 	)

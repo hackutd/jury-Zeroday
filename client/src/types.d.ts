@@ -15,6 +15,7 @@ interface Project {
     stars: number;
     track_stars: { [track: string]: number };
     track_scores: { [track: string]: number };
+    prize_scores: { [prize: string]: number } | null;
     group: number;
     last_activity: number;
 }
@@ -46,7 +47,20 @@ interface Judge {
     group: number;
     current: string;
     flagged: string[];
+    prize_rankings: PrizeRanking[] | null;
     last_activity: number;
+}
+
+interface PrizeRanking {
+    prize: string;
+    ranking: string[];
+}
+
+// An opt-in prize the judge ranks for, with the seen projects that opted into it (GET /judge/prizes)
+interface JudgePrize {
+    prize: string;
+    project_ids: string[];
+    ranking: string[];
 }
 
 interface Stats {
@@ -140,6 +154,7 @@ interface Options {
     block_reqs: boolean;
     max_req_per_min: number;
     disable_general_judging: boolean;
+    prize_rankings: string[];
 }
 
 interface FetchResponse<T> {

@@ -281,3 +281,56 @@ func ExportDiscordCSV(context *util.Context) util.Result {
 	}
 	return util.ResultOk()
 }
+
+// ExportPrizesZip verifies that /admin/export/prizes returns a zip with a CSV per prize that
+// includes team member emails, and a PDF per prize with the prize name and no emails
+func ExportPrizesZip(context *util.Context) util.Result {
+	if res := resetProjects(context); !res.Success {
+		return res
+	}
+	status, body := util.PostFileWithStatus(context.Logger, "/project/devpost", "csv", "devpost.csv", devpostPIICSV, nil, util.AdminAuth())
+	if status != 200 || !util.IsOk(body) {
+		return util.NewResult(false, fmt.Sprintf("Devpost PII import failed (%d): %s", status, body))
+	}
+
+	status, body = util.GetRequestWithStatus(context.Logger, "/admin/export/prizes", util.AdminAuth())
+	if status != 200 {
+		return util.NewResult(false, fmt.Sprintf("Export prizes failed (%d): %s", status, body))
+	}
+	r, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len(body)))
+	if err != nil {
+		return util.NewResult(false, "Prize export is not a valid zip: "+err.Error())
+	}
+	files := map[string]string{}
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return util.NewResult(false, "Could not open "+f.Name+": "+err.Error())
+		}
+		content, _ := io.ReadAll(rc)
+		rc.Close()
+		files[f.Name] = string(content)
+	}
+
+	// Only the team project opted into a prize (Design)
+	if len(files) != 2 {
+		return util.NewResult(false, fmt.Sprintf("Prize export should have 2 files, got %d", len(files)))
+	}
+	csvFile, ok := files["csv-with-emails/Design.csv"]
+	if !ok || !strings.Contains(csvFile, "bob@example.com") || !strings.Contains(csvFile, "Member 1 Email") {
+		return util.NewResult(false, "csv-with-emails/Design.csv should exist and include team member emails")
+	}
+	pdfFile, ok := files["pdf/Design.pdf"]
+	if !ok || !strings.HasPrefix(pdfFile, "%PDF-") || !strings.Contains(pdfFile, "(Design) Tj") || !strings.Contains(pdfFile, "(Team Project) Tj") {
+		return util.NewResult(false, "pdf/Design.pdf should be a PDF with the prize and project names")
+	}
+	if strings.Contains(pdfFile, "@example.com") {
+		return util.NewResult(false, "Prize PDFs should not include emails")
+	}
+
+	// The export is admin only
+	if status, _ := util.GetRequestWithStatus(context.Logger, "/admin/export/prizes", util.DefaultAuth()); status == 200 {
+		return util.NewResult(false, "Prize export must require admin auth")
+	}
+	return util.ResultOk()
+}

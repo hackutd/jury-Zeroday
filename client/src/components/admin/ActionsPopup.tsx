@@ -123,7 +123,7 @@ const ActionsPopup = (props: ActionsPopupProps) => {
                             </Button>
                         </div>
                         <Paragraph
-                            text="Prevent judges from making changes to ranking and stars."
+                            text="Prevent judges from making changes to rankings."
                             className="basis-1/2 grow-0 shrink-0"
                         />
                     </ActionsItem>
@@ -138,7 +138,7 @@ const ActionsPopup = (props: ActionsPopupProps) => {
                 red
             >
                 Are you sure you want to {options.deliberation ? 'end' : 'start'} deliberation? This
-                will impact whether or not judges will be able to rank/star projects!
+                will impact whether or not judges will be able to rank projects!
             </ConfirmPopup>
             <ConfirmPopup
                 enabled={swapPopup}

@@ -51,7 +51,6 @@ const JudgeLive = () => {
     const [audioPopupOpen, setAudioPopupOpen] = useState(false);
     const [paused, setPaused] = useState(false);
     const [notes, setNotes] = useState('');
-    const [starred, setStarred] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -259,13 +258,16 @@ const JudgeLive = () => {
     const finishJudging = async () => {
         const res = await postRequest<OkResponse>('/judge/finish', 'judge', {
             notes,
-            starred,
         });
         if (res.status !== 200) {
             errorAlert(res);
+            navigate('/judge');
+            return;
         }
 
-        navigate('/judge');
+        // Pass the judged project on in the URL (survives a refresh) so the judge page can
+        // queue its prize rankings
+        navigate(judge?.current ? `/judge?judged=${judge.current}` : '/judge');
     };
 
     // Display an error page if an error condition holds
@@ -427,8 +429,6 @@ const JudgeLive = () => {
                     callback={finishJudging}
                     notes={notes}
                     setNotes={setNotes}
-                    starred={starred}
-                    setStarred={setStarred}
                 />
                 <FlagPopup
                     enabled={flagPopup}

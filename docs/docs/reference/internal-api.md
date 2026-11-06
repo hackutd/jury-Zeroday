@@ -68,6 +68,7 @@ All routes are listed in `server/router/init.go` with their respective handlers.
 | [/admin/options](#get-adminoptions)                    | GET    | admin | Gets all config options set                  |
 | [/admin/options](#post-adminoptions)                   | POST   | admin | Sets config options                          |
 | [/admin/tracks](#post-admintracks)                     | POST   | admin | Update the list of tracks                    |
+| [/admin/prize-rankings](#post-adminprize-rankings)     | POST   | admin | Update the prizes every judge ranks for      |
 | [/admin/track-views](#post-admintrack-views)           | POST   | admin | Update the min views per track               |
 | [/admin/num-groups](#post-adminnum-groups)             | POST   | admin | Sets num of groups and reassigns nums        |
 | [/admin/group-sizes](#post-admingroup-sizes)           | POST   | admin | Sets the size of groups and reassigns nums   |
@@ -77,6 +78,7 @@ All routes are listed in `server/router/init.go` with their respective handlers.
 | [/admin/export/projects](#get-adminexportprojects)     | GET    | admin | Exports projects as a CSV                    |
 | [/admin/export/challenges](#get-adminexportchallenges) | GET    | admin | Exports projects by challenge as ZIP of CSVs |
 | [/admin/export/discord](#get-adminexportdiscord)       | GET    | admin | Exports projects A-Z for Discord as a CSV    |
+| [/admin/export/prizes](#get-adminexportprizes)         | GET    | admin | Exports per-prize CSVs (PII) and PDFs as ZIP |
 | [/admin/export/rankings](#get-adminexportrankings)     | GET    | admin | Exports a list of rankings for each judge    |
 | [/judge/hide/:id](#put-judgehideid)                    | PUT    | admin | Hides a judge                                |
 | [/project/hide/:id](#put-projecthideid)                | PUT    | admin | Hides a project                              |
@@ -100,6 +102,8 @@ All routes are listed in `server/router/init.go` with their respective handlers.
 | [/judge/skip](#post-judgeskip)                         | POST   | judge | Skips the current project with a reason      |
 | [/judge/finish](#post-judgefinish)                     | POST   | judge | Finish viewing a project                     |
 | [/judge/rank](#post-judgerank)                         | POST   | judge | Update judge rankings                        |
+| [/judge/prizes](#get-judgeprizes)                      | GET    | judge | Lists prizes the judge can rank for          |
+| [/judge/rank/prize](#post-judgerankprize)              | POST   | judge | Update the judge's ranking for one prize     |
 | [/judge/star/:id](#put-judgestarid)                    | PUT    | judge | Update star ranking for a project            |
 | [/judge/notes/:id](#put-judgenotesid)                  | PUT    | judge | Update notes for a project                   |
 | [/project/:id](#get-projectid)                         | GET    | judge | Gets a project by ID                         |
@@ -773,6 +777,21 @@ Update the list of tracks
 
 -   **Response**: OK response
 
+### POST /admin/prize-rankings
+
+Update the opt-in prizes every judge also ranks for. Names are trimmed, blanks are dropped and duplicates (ignoring case) are removed.
+
+-   **Auth**: admin
+-   **Body**: JSON
+
+```json
+{
+    "prize_rankings": ["String"]
+}
+```
+
+-   **Response**: OK response
+
 ### POST /admin/track-views
 
 Update the min views per track
@@ -869,7 +888,7 @@ Exports projects as a CSV
 Exports projects by challenge as ZIP of CSVs
 
 -   **Auth**: admin
--   **Query**: `team_members=true` (optional) to add each team member's name and email columns, same as the participants export. Any other value is ignored.
+-   **Query**: `team_members=true` (optional) to add each team member's name and email columns (`Member N Name`, then `Member N Email`). Any other value is ignored.
 -   **Response**: ZIP Blob
 
 ### GET /admin/export/discord
@@ -878,6 +897,13 @@ Exports every project's name, table number and Devpost URL as a CSV (`Project, T
 
 -   **Auth**: admin
 -   **Response**: CSV Blob
+
+### GET /admin/export/prizes
+
+Exports a ZIP for each opt-in prize: `csv-with-emails/<prize>.csv` (same as `/admin/export/challenges?team_members=true`) and `pdf/<prize>.pdf` (printable table numbers and project names, sorted by table). Used by the Export by Challenges button.
+
+-   **Auth**: admin
+-   **Response**: ZIP Blob
 
 ### GET /admin/export/rankings
 
@@ -1214,6 +1240,39 @@ Update judge rankings
 
 ```json
 {
+    "ranking": ["ObjectID"]
+}
+```
+
+-   **Response**: OK response
+
+### GET /judge/prizes
+
+Lists the prizes in `prize_rankings` that at least one of the judge's seen projects opted into, in settings order. `project_ids` are those seen projects (in the order seen) and `ranking` is the judge's current ranking for the prize.
+
+-   **Auth**: judge
+-   **Response**: JSON
+
+```json
+[
+    {
+        "prize": "String",
+        "project_ids": ["ObjectID"],
+        "ranking": ["ObjectID"]
+    }
+]
+```
+
+### POST /judge/rank/prize
+
+Update the judge's ranking for one prize (matched ignoring case). Fails with 400 if the prize is not in `prize_rankings`, or if a project is listed twice or wasn't seen by the judge and opted into the prize. Fails during deliberation.
+
+-   **Auth**: judge
+-   **Body**: JSON
+
+```json
+{
+    "prize": "String",
     "ranking": ["ObjectID"]
 }
 ```

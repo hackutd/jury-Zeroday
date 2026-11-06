@@ -76,8 +76,7 @@ const JudgeWelcome = () => {
                 <p className="my-2">
                     Once you get started, you will be presented with a project and its location.
                     Please go to that project and listen to their presentation. Once completed, you
-                    may take notes or star the project. Click done to return to the ranking
-                    interface.
+                    may take notes on the project. Click done to return to the ranking interface.
                 </p>
                 <p className="my-2">
                     Once you have scored a project, you will be taken to the ranking screen. Here,

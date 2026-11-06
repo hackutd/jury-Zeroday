@@ -4,6 +4,7 @@ import (
 	"context"
 	"server/database"
 	"server/models"
+	"server/util"
 	"slices"
 
 	"github.com/gin-gonic/gin"
@@ -16,34 +17,92 @@ import (
 // AggregateRanking will take the ranking array from the judge and create
 // the aggregated ranking model using the Copeland counting method
 func AggregateRanking(judge *models.Judge) []models.AggRanking {
+	seen := make([]primitive.ObjectID, 0, len(judge.SeenProjects))
+	for _, p := range judge.SeenProjects {
+		seen = append(seen, p.ProjectId)
+	}
+	return copelandScores(judge.Rankings, seen)
+}
+
+// copelandScores scores one judge's ranking with the Copeland counting method. Candidates are all
+// projects the ranking could contain; the ones not in the ranking count as unranked.
+//  1. Ranked project at index i: wins against everything below it and all unranked projects,
+//     loses to everything above it, so score = (rc - i - 1) - i + uc = rc + uc - 1 - 2i
+//  2. Unranked project: beaten by every ranked project, so score = -rc
+func copelandScores(ranking []primitive.ObjectID, candidates []primitive.ObjectID) []models.AggRanking {
 	// Get unranked projects
 	var unranked []primitive.ObjectID
-	for _, p := range judge.SeenProjects {
-		if !slices.Contains(judge.Rankings, p.ProjectId) {
-			unranked = append(unranked, p.ProjectId)
+	for _, p := range candidates {
+		if !slices.Contains(ranking, p) {
+			unranked = append(unranked, p)
 		}
 	}
 
 	// Create output
-	rc := len(judge.Rankings)
+	rc := len(ranking)
 	uc := len(unranked)
 	out := make([]models.AggRanking, 0, rc+uc)
 
 	// Calculate scores for ranked projects
-	// score = won - loss + unranked count
-	// score = (rc - i - 1) - i + uc = rc + uc - 1 - 2i
-	// c = rc + uc - 1; score = c - 2i
 	c := rc + uc - 1
-	for i, p := range judge.Rankings {
+	for i, p := range ranking {
 		out = append(out, *models.NewAggRanking(p, int64(c-2*i)))
 	}
 
 	// Calculate scores for unranked projects
-	// score = -rc (beaten by all ranked projects)
 	for _, p := range unranked {
 		out = append(out, *models.NewAggRanking(p, int64(-rc)))
 	}
 
+	return out
+}
+
+// PrizeProjectIds returns the IDs of the projects the judge has seen that opted into the prize
+// (ignoring case), in the order they were seen. Seen projects that no longer exist are left out.
+func PrizeProjectIds(judge *models.Judge, prize string, projects map[primitive.ObjectID]*models.Project) []primitive.ObjectID {
+	out := make([]primitive.ObjectID, 0)
+	for _, seen := range judge.SeenProjects {
+		project, ok := projects[seen.ProjectId]
+		if ok && util.ContainsFold(project.ChallengeList, prize) {
+			out = append(out, seen.ProjectId)
+		}
+	}
+	return out
+}
+
+// AggregatePrizeScores calculates every project's score for each prize in options.PrizeRankings,
+// keyed by project ID and then prize name. Every judge counts, general and track judges alike.
+//  1. For each judge and prize, the candidates are the seen projects that opted into the prize
+//  2. The judge's prize ranking is filtered to those candidates (drops deleted projects and
+//     projects that are no longer opted in), then scored with the Copeland method
+//  3. Scores are summed over all judges
+func AggregatePrizeScores(judges []*models.Judge, projects []*models.Project, prizes []string) map[primitive.ObjectID]map[string]int64 {
+	byId := make(map[primitive.ObjectID]*models.Project, len(projects))
+	for _, p := range projects {
+		byId[p.Id] = p
+	}
+
+	out := make(map[primitive.ObjectID]map[string]int64)
+	for _, judge := range judges {
+		for _, prize := range prizes {
+			candidates := PrizeProjectIds(judge, prize, byId)
+			if len(candidates) == 0 {
+				continue
+			}
+			ranking := make([]primitive.ObjectID, 0)
+			for _, id := range judge.GetPrizeRanking(prize) {
+				if slices.Contains(candidates, id) && !slices.Contains(ranking, id) {
+					ranking = append(ranking, id)
+				}
+			}
+			for _, agg := range copelandScores(ranking, candidates) {
+				if out[agg.ProjectId] == nil {
+					out[agg.ProjectId] = make(map[string]int64)
+				}
+				out[agg.ProjectId][prize] += agg.Score
+			}
+		}
+	}
 	return out
 }
 

@@ -21,9 +21,12 @@ import { errorAlert } from '../../../util';
 interface RankingProps {
     judge: Judge | null;
     deliberation: boolean;
+
+    /* If set, rank only the seen projects that opted into this prize, saved as the prize ranking */
+    prize?: JudgePrize;
 }
 
-const Ranking = ({ judge, deliberation }: RankingProps) => {
+const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
     const [activeId, setActiveId] = useState<number | null>(null);
     const [activeDropzone, setActiveDropzone] = useState<string | null>(null);
     const [disabled, setDisabled] = useState(false);
@@ -46,16 +49,19 @@ const Ranking = ({ judge, deliberation }: RankingProps) => {
         async function fetchData() {
             if (!judge) return;
 
-            const allProjects = judge.seen_projects.map((p, i) => ({
-                id: i + 1,
-                ...p,
-            }));
+            const allProjects = judge.seen_projects
+                .map((p, i) => ({
+                    id: i + 1,
+                    ...p,
+                }))
+                .filter((p) => !prize || prize.project_ids.includes(p.project_id));
 
-            const rankedProjects = judge.rankings.map((r) =>
-                allProjects.find((p) => p.project_id === r)
-            ) as SortableJudgedProject[];
+            const rankings = prize ? prize.ranking : judge.rankings;
+            const rankedProjects = rankings
+                .map((r) => allProjects.find((p) => p.project_id === r))
+                .filter((p) => p !== undefined) as SortableJudgedProject[];
             const unrankedProjects = allProjects.filter((p) =>
-                judge.rankings.every((r) => r !== p.project_id)
+                rankings.every((r) => r !== p.project_id)
             );
             unrankedProjects.reverse();
 
@@ -65,7 +71,7 @@ const Ranking = ({ judge, deliberation }: RankingProps) => {
         }
 
         fetchData();
-    }, [judge]);
+    }, [judge, prize]);
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event;
@@ -156,9 +162,13 @@ const Ranking = ({ judge, deliberation }: RankingProps) => {
 
     const saveSort = async (projects: SortableJudgedProject[]) => {
         // Save the rankings
-        const saveRes = await postRequest<OkResponse>('/judge/rank', 'judge', {
-            ranking: projects.map((p) => p.project_id),
-        });
+        const ranking = projects.map((p) => p.project_id);
+        const saveRes = prize
+            ? await postRequest<OkResponse>('/judge/rank/prize', 'judge', {
+                  prize: prize.prize,
+                  ranking,
+              })
+            : await postRequest<OkResponse>('/judge/rank', 'judge', { ranking });
         if (saveRes.status !== 200) {
             // If deliberation, reload page
             if (saveRes.error.indexOf('deliberation') !== -1) {
@@ -184,10 +194,12 @@ const Ranking = ({ judge, deliberation }: RankingProps) => {
         >
             {deliberation && (
                 <p className="p-2 text-center mt-4 m-2 border-gold border-2 bg-gold/20 rounded-md">
-                    Deliberation has started. You cannot change rankings or stars.
+                    Deliberation has started. You cannot change rankings.
                 </p>
             )}
-            <h2 className="text-primary text-xl font-bold mt-4">Ranked Projects</h2>
+            <h2 className="text-primary text-xl font-bold mt-4">
+                {prize ? `Ranked Projects for ${prize.prize}` : 'Ranked Projects'}
+            </h2>
             <p className="text-light text-sm">
                 Rank as many projects as you can. Click on titles to edit scores and see details.
             </p>

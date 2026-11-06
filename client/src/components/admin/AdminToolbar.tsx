@@ -5,13 +5,15 @@ import Dropdown from '../Dropdown';
 import { useAdminStore, useAdminTableStore, useOptionsStore } from '../../store';
 import ActionsDropdown from '../ActionsDropdown';
 import { postRequest } from '../../api';
-import { errorAlert } from '../../util';
+import { BEST_BEGINNER_PRIZE, errorAlert, isFilterOnlyPrize } from '../../util';
 import MoveGroupPopup from './tables/MoveGroupPopup';
 
 const AdminToolbar = (props: { showProjects: boolean; lastUpdate: Date }) => {
     const options = useOptionsStore((state) => state.options);
     const selectedTrack = useOptionsStore((state) => state.selectedTrack);
     const setSelectedTrack = useOptionsStore((state) => state.setSelectedTrack);
+    const selectedPrize = useOptionsStore((state) => state.selectedPrize);
+    const setSelectedPrize = useOptionsStore((state) => state.setSelectedPrize);
     const fetchStats = useAdminStore((state) => state.fetchStats);
     const fetchJudges = useAdminStore((state) => state.fetchJudges);
     const fetchProjects = useAdminStore((state) => state.fetchProjects);
@@ -52,6 +54,19 @@ const AdminToolbar = (props: { showProjects: boolean; lastUpdate: Date }) => {
             setSelectedTrack(options.tracks[0]);
         }
     }, [generalJudging, selectedTrack, options.tracks]);
+
+    // Prize filters: Best Beginner is always there (filter only), then the ranked prizes from settings
+    const prizeFilters = [
+        BEST_BEGINNER_PRIZE,
+        ...options.prize_rankings.filter((prize) => !isFilterOnlyPrize(prize)),
+    ];
+
+    // If the selected prize is removed from the settings, go back to all projects
+    useEffect(() => {
+        if (selectedPrize !== '' && !prizeFilters.includes(selectedPrize)) {
+            setSelectedPrize('');
+        }
+    }, [options.prize_rankings, selectedPrize]);
 
     // When selected changes, update selectedIdxs
     useEffect(() => {
@@ -151,6 +166,17 @@ const AdminToolbar = (props: { showProjects: boolean; lastUpdate: Date }) => {
                             }
                             selected={selectedTrack === '' ? 'General' : selectedTrack}
                             setSelected={setSelectedTrack}
+                            large
+                            className="text-center text-md md:text-xl h-12"
+                        />
+                    )}
+                    {props.showProjects && (
+                        <Dropdown
+                            options={['All Prizes', ...prizeFilters]}
+                            selected={selectedPrize === '' ? 'All Prizes' : selectedPrize}
+                            setSelected={(prize) =>
+                                setSelectedPrize(prize === 'All Prizes' ? '' : prize)
+                            }
                             large
                             className="text-center text-md md:text-xl h-12"
                         />

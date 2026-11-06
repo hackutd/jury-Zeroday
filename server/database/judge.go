@@ -241,6 +241,16 @@ func UpdateJudgeRanking(db *mongo.Database, ctx context.Context, id primitive.Ob
 	return err
 }
 
+// UpdateJudgePrizeRankings replaces all of a judge's prize rankings
+func UpdateJudgePrizeRankings(db *mongo.Database, ctx context.Context, id primitive.ObjectID, prizeRankings []models.PrizeRanking) error {
+	_, err := db.Collection("judges").UpdateOne(
+		ctx,
+		gin.H{"_id": id},
+		gin.H{"$set": gin.H{"prize_rankings": prizeRankings, "last_activity": util.Now()}},
+	)
+	return err
+}
+
 // UpdateJudgeSeenProjects updates the seen projects of a judge
 func UpdateJudgeSeenProjects(db *mongo.Database, ctx context.Context, judge *models.Judge) error {
 	_, err := db.Collection("judges").UpdateOne(ctx, gin.H{"_id": judge.Id}, gin.H{"$set": gin.H{"seen_projects": judge.SeenProjects}})

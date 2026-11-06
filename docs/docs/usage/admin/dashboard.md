@@ -82,7 +82,7 @@ The **actions menu** on the right side of each row allows you to perform actions
 - **Prioritize**: (Projects only) Allows you to prioritize a project, sending the next avaliable judge (in the same [group](/docs/usage/admin/groups)) to that project. This may be used if a project hasn't been seen enough.
 - **Move Table**: (Projects only) Moves the project to a new table. This should only be done during judging if you are **physically moving that project to a new table**. When using [groups](/docs/usage/admin/groups), it is recommended to use the following **Move Group** functionality. Note that if you try moving a project to a table that already has a project, this move will not be allowed to happen.
 - **Move Group**: Moves the project/judge to another group. Keep in mind moving a project to a new group would likely need to have them change physical location, so be cautious doing this during judging. Moving judges to another group can be done freely during judging but may require that judge to walk more. You cannot move a project to another group if that group is full.
-- **Scores**: (Judges only) View all rankings and stars for the judge.
+- **Scores**: (Judges only) View all rankings for the judge.
 - **Delete**: Deletes the judge/project. DO NOT DELETE PROJECTS DURING JUDGING. Instead, hide the project. Deleting judges during judging is not necessarily bad to the system but may upset the judge who you delete.
 
 ### Flagged Project

@@ -149,7 +149,18 @@ function pad(str: string, max: number) {
     return str.substring(0, max) + '...';
 }
 
+// Best Beginner is always a dashboard prize filter, but judges never rank for it (it is picked from
+// the general scores). Any opt-in prize containing "best beginner" matches, eg. "Best Beginner Hack".
+// Keep in sync with models.IsFilterOnlyPrize on the server.
+const BEST_BEGINNER_PRIZE = 'Best Beginner';
+
+function isFilterOnlyPrize(prize: string) {
+    return prize.toLowerCase().includes(BEST_BEGINNER_PRIZE.toLowerCase());
+}
+
 export {
+    BEST_BEGINNER_PRIZE,
+    isFilterOnlyPrize,
     timeSince,
     arrow,
     fixIfFloat,

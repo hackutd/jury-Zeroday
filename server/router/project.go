@@ -192,6 +192,26 @@ func ListProjects(ctx *gin.Context) {
 		}
 	}
 
+	// Calculate the prize scores from every judge's prize rankings
+	options, err := database.GetOptions(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting options: " + err.Error()})
+		return
+	}
+	if rankedPrizes := options.RankedPrizes(); len(rankedPrizes) > 0 {
+		judges, err := database.FindAllJudges(state.Db, ctx)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting judges: " + err.Error()})
+			return
+		}
+		prizeScores := judging.AggregatePrizeScores(judges, projects, rankedPrizes)
+		for i, p := range projects {
+			if scores, ok := prizeScores[p.Id]; ok {
+				projects[i].PrizeScores = scores
+			}
+		}
+	}
+
 	// Send OK
 	ctx.JSON(http.StatusOK, projects)
 }

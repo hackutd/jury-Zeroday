@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { errorAlert, timeSince } from '../../../util';
+import { errorAlert, isFilterOnlyPrize, timeSince } from '../../../util';
 import DeletePopup from './DeletePopup';
 import EditProjectPopup from './EditProjectPopup';
 import { useAdminStore, useAdminTableStore, useFlagsStore, useOptionsStore } from '../../../store';
@@ -29,6 +29,7 @@ const ProjectRow = ({ project, idx }: ProjectRowProps) => {
     const fetchProjects = useAdminStore((state) => state.fetchProjects);
     const options = useOptionsStore((state) => state.options);
     const track = useOptionsStore((state) => state.selectedTrack);
+    const prize = useOptionsStore((state) => state.selectedPrize);
     const allFlags = useFlagsStore((state) => state.flags);
     const setSelected = useAdminTableStore((state) => state.setSelected);
     const selected = useAdminTableStore((state) => state.selected);
@@ -80,12 +81,13 @@ const ProjectRow = ({ project, idx }: ProjectRowProps) => {
     }, [allFlags, project]);
 
     let score = project.score;
-    let stars = project.stars;
     let seen = project.seen;
     if (options.judge_tracks && track !== '') {
         score = project.track_scores?.[track] || 0;
-        stars = project.track_stars[track] || 0;
         seen = project.track_seen[track] || 0;
+    }
+    if (prize !== '' && !isFilterOnlyPrize(prize)) {
+        score = project.prize_scores?.[prize] || 0;
     }
 
     return (
@@ -142,7 +144,6 @@ const ProjectRow = ({ project, idx }: ProjectRowProps) => {
                     <td className="text-center">{project.group}</td>
                 )}
                 <td className="text-center">{score}</td>
-                <td className="text-center">{stars}</td>
                 <td className="text-center">{seen}</td>
                 <td className="text-center">{timeSince(project.last_activity)}</td>
                 <td className="text-right align-center">

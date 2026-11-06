@@ -12,6 +12,7 @@ import AddJudges from './pages/admin/AddJudges';
 import JudgeWelcome from './pages/judge/welcome';
 import JudgeLive from './pages/judge/live';
 import Project from './pages/judge/project';
+import JudgePrizeRanking from './pages/judge/prize';
 
 import AdminSettings from './pages/admin/settings';
 import Expo from './pages/Expo';
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
     {
         path: '/judge/project/:id',
         element: <Project />,
+    },
+    {
+        path: '/judge/prize',
+        element: <JudgePrizeRanking />,
     },
     {
         path: '/admin/login',

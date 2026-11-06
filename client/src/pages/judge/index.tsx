@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Container from '../../components/Container';
 import JuryHeader from '../../components/JuryHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../components/Button';
 import StatBlock from '../../components/StatBlock';
 import Loading from '../../components/Loading';
@@ -9,9 +9,12 @@ import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
+import { prizeQueueUrl } from './prize';
 
 const Judge = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const [prizes, setPrizes] = useState<JudgePrize[]>([]);
     const [judge, setJudge] = useState<Judge | null>(null);
     const [loaded, setLoaded] = useState(false);
     const [projCount, setProjCount] = useState(0);
@@ -73,6 +76,14 @@ const Judge = () => {
             }
             setDeliberation(delibRes.data?.ok === 1);
 
+            // Get the prizes the judge can rank for
+            const prizesRes = await getRequest<JudgePrize[]>('/judge/prizes', 'judge');
+            if (prizesRes.status !== 200) {
+                errorAlert(prizesRes);
+                return;
+            }
+            setPrizes(prizesRes.data as JudgePrize[]);
+
             setLoaded(true);
         }
 
@@ -80,6 +91,13 @@ const Judge = () => {
     }, []);
 
     if (!loaded || !judge) return <Loading disabled={!loaded || !judge} />;
+
+    // Right after finishing a project, queue a ranking screen for each prize it opted into
+    // It's kept in the URL (?judged=<id>) so a refresh keeps the prize queue
+    const justJudged = searchParams.get('judged');
+    const prizeQueue = justJudged
+        ? prizes.filter((p) => p.project_ids.includes(justJudged)).map((p) => p.prize)
+        : [];
 
     return (
         <>
@@ -93,15 +111,44 @@ const Judge = () => {
                     <p className="text-lighter font-bold">Track: {judge.track}</p>
                 )}
                 <div className="w-full mb-6 mt-2">
-                    <Button type="primary" full href="/judge/live">
-                        {judge.current !== null ? 'Resume Project' : 'Next Project'}
-                    </Button>
+                    {prizeQueue.length > 0 ? (
+                        <Button
+                            type="primary"
+                            full
+                            onClick={() => navigate(prizeQueueUrl(prizeQueue))}
+                        >
+                            Next: Rank for {prizeQueue[0]}
+                        </Button>
+                    ) : (
+                        <Button type="primary" full href="/judge/live">
+                            {judge.current !== null ? 'Resume Project' : 'Next Project'}
+                        </Button>
+                    )}
                 </div>
                 <div className="flex justify-evenly">
                     <StatBlock name="Seen" value={judge.seen_projects.length + judge.flagged.length} />
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
                 <Ranking judge={judge} deliberation={deliberation} />
+                {prizes.length > 0 && (
+                    <>
+                        <h2 className="text-primary text-xl font-bold mt-6">Prize Rankings</h2>
+                        <p className="text-light text-sm">Edit your ranking for a prize.</p>
+                        <div className="h-[1px] w-full bg-light my-2"></div>
+                        <div className="flex flex-wrap gap-2">
+                            {prizes.map((p) => (
+                                <Button
+                                    key={p.prize}
+                                    type="outline-primary"
+                                    className="text-lg"
+                                    onClick={() => navigate(prizeQueueUrl([p.prize]))}
+                                >
+                                    {p.prize} ({p.project_ids.length})
+                                </Button>
+                            ))}
+                        </div>
+                    </>
+                )}
             </Container>
         </>
     );

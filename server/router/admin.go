@@ -8,6 +8,7 @@ import (
 	"server/funcs"
 	"server/models"
 	"server/util"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -431,6 +432,32 @@ func ExportProjectsByChallenge(ctx *gin.Context) {
 	}
 	state.Logger.AdminLogf("Exported projects by challenge to CSV")
 	funcs.AddZipFile("projects", zipData, ctx)
+}
+
+// GET /admin/export/prizes - ExportPrizes exports a zip for sponsors with two folders: one CSV per
+// opt-in prize with team member names and emails, and one printable PDF per prize listing each
+// project's table number and name. The CSVs contain PII.
+func ExportPrizes(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get all the projects
+	projects, err := database.FindAllProjects(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
+		return
+	}
+
+	// Create the zip file
+	zipData, err := funcs.CreatePrizeExportZip(projects)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error creating zip file: " + err.Error()})
+		return
+	}
+
+	// Send zip file
+	state.Logger.AdminLogf("Exported prize CSVs (with team member names and emails) and PDFs")
+	funcs.AddZipFile("prize-exports", zipData, ctx)
 }
 
 // POST /admin/export/rankings - ExportRankings exports the rankings of each judge as a CSV
@@ -908,6 +935,48 @@ func SetTracks(ctx *gin.Context) {
 
 	// Send OK
 	state.Logger.AdminLogf("Updated tracks to %s", util.StructToStringWithoutNils(req))
+	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
+}
+
+// POST /admin/prize-rankings - SetPrizeRankings sets the opt-in prizes every judge also ranks for.
+// Names are trimmed, blanks dropped and duplicates (ignoring case) removed. Best Beginner is
+// dropped because it is a hardcoded filter that judges never rank for (models.IsFilterOnlyPrize).
+func SetPrizeRankings(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get the request
+	var req models.OptionalOptions
+	err := ctx.BindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "error parsing request: " + err.Error()})
+		return
+	}
+
+	// Make sure the prize rankings field is valid
+	if req.PrizeRankings == nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid prize rankings field"})
+		return
+	}
+
+	// Clean up the prize names
+	prizes := make([]string, 0, len(*req.PrizeRankings))
+	for _, prize := range *req.PrizeRankings {
+		prize = strings.TrimSpace(prize)
+		if prize != "" && !models.IsFilterOnlyPrize(prize) && !util.ContainsFold(prizes, prize) {
+			prizes = append(prizes, prize)
+		}
+	}
+
+	// Update options
+	err = database.UpdateOptions(state.Db, ctx, &models.OptionalOptions{PrizeRankings: &prizes})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error updating prize rankings: " + err.Error()})
+		return
+	}
+
+	// Send OK
+	state.Logger.AdminLogf("Updated prize rankings to %v", prizes)
 	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
 }
 

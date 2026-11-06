@@ -36,7 +36,7 @@ Judges can drag and drop projects from the "Unranked Projects" section into the 
 
 ![Ranked Projects](./assets/ranked-projects.png)
 
-Note that judges can also star projects from this screen. Projects' titles, location, and judge personal notes are shown on this screen, as well as if they starred the project. If they click on a project title, they will be taken to the project summary screen. On this screen, judges can see the description of the projects as well as update the star status and their personal notes about the project.
+Projects' titles, location, and judge personal notes are shown on this screen. If they click on a project title, they will be taken to the project summary screen. On this screen, judges can see the description of the projects as well as update their personal notes about the project.
 
 ![Judged Project](./assets/judged-project.png)
 
@@ -52,7 +52,7 @@ If judging is paused, judges will see a notice on this page (instead of a projec
 
 Once the judge has gotten to the table, they should click the big **Start Judging** button. This will start a timer (set in the [admin settings](/docs/usage/admin/configuration#judging-clock-and-timer)) that counts down. Judges may set this on the table to show participants how much time they have left. When the timer runs out, it will sound an alarm--make sure to tell judges to turn up their sound to hear this alarm!
 
-Once the group has finished presenting their project, click the **Done** button. This will bring up a popup that lets the judge finish their notes, as well as star the project if they thought the project was especially good. Clicking **Submit** will return the judge back to the [judging dashboard](#judging-dashboard).
+Once the group has finished presenting their project, click the **Done** button. This will bring up a popup that lets the judge finish their notes. Clicking **Submit** will return the judge back to the [judging dashboard](#judging-dashboard).
 
 If the judge approaches a table and either the group is *absent* or is *busy* with another judge, they can click the **Skip** button to skip the project with one of those reasons. If a project is skipped for being absent **three times**, the project is automatically hidden. The project will be given a flag **Hidden due to Absent** that can be seen on the admin dashboard. Organizers should confirm the project's absence when this flag shows up. Also note that skipping a project because it is busy/absent does NOT affect the project's score in any way. Jury should not assign more than one judge to a project, but other judges such as sponsor judges may be occupying a project. Skipped projects will be assigned to another judge eventually, so make sure judges are comfortable skipping projects so they aren't waiting on a project for too long.
 
@@ -67,6 +67,8 @@ Judges shouldn't have to flag projects often, and you should always send an orga
 ## Continuing Judging
 
 Once judges finish viewing a project, instruct them to rank the project among the other projects they've seen. If they want to take a break at any point, they can do so freely simply by not requesting another project to view. We ask judges to finish judging the project they are on before taking a break as **when judges are assigned a project, no other judge can see that project**! To get to their next project, they simply click the **Next Project** button at the top.
+
+If [Prize Rankings](/docs/usage/admin/configuration#prize-rankings) are set and the project they just finished opted into one of those prizes, the button at the top says **Next: Rank for _prize_** instead. It walks them through one ranking screen per matching prize, showing only the projects they've seen that opted into that prize, and then back to the dashboard where **Next Project** appears again.
 
 :::tip
 It helps organizers greatly if judges rank immediately after seeing a project--organizers can see which projects are leading and can start considering winners/checking for cheating ahead of time.

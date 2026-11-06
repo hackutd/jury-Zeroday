@@ -26,7 +26,7 @@ Once track judging is enabled, a **Keep General Judging** checkbox appears (chec
 
 When general judging is turned off, the **General** option is removed from the admin dashboard dropdown, the add judge form and the QR codes page. New judges must be assigned a track (judges without a track are rejected, including CSV rows with an empty track), and any existing general judges will not be given projects.
 
-When track judging is turned off, judges cannot be added with a track: the track field is hidden on the add judge form, CSV rows with a track are rejected, and track QR codes stop working when scanned. Judges who were already assigned a track keep it, and their rankings and stars will **not** count toward the general scores, so make sure track judging is on if you have track judges.
+When track judging is turned off, judges cannot be added with a track: the track field is hidden on the add judge form, CSV rows with a track are rejected, and track QR codes stop working when scanned. Judges who were already assigned a track keep it, and their rankings will **not** count toward the general scores, so make sure track judging is on if you have track judges.
 
 :::warning
 Make sure you do NOT toggle this on/off during judging as it may result in unexpected behavior when assigning/judging projects for track-specific judges!
@@ -44,7 +44,7 @@ To add a track judge by QR code, an [additional dropdown](/docs/usage/admin/add-
 
 ## Judging Tracks
 
-Track judges judge the same way as general judges: they see projects one at a time, take notes, can [star](/docs/usage/admin/scoring#starring) projects, and **rank** the projects they have seen. Track judges only ever see projects in their own track, and each project is viewed at most the number of times set in the **Track Views** setting.
+Track judges judge the same way as general judges: they see projects one at a time, take notes, and **rank** the projects they have seen. Track judges only ever see projects in their own track, and each project is viewed at most the number of times set in the **Track Views** setting.
 
 When picking a track judge's next project, Jury uses the same comparison-based approach as general judging, but only within the track:
 
@@ -55,4 +55,4 @@ When picking a track judge's next project, Jury uses the same comparison-based a
 
 ## Track Scores
 
-Each track's score is calculated from the rankings of **that track's judges only**, using the same [scoring](/docs/usage/admin/scoring) as general judging. Selecting a track in the admin dashboard dropdown shows that track's scores, stars and views. Track judges' rankings and stars do **not** affect the general scores, and general judges do not affect track scores. Track judges should still get together after judging to decide on a winner, using the track scores and stars.
+Each track's score is calculated from the rankings of **that track's judges only**, using the same [scoring](/docs/usage/admin/scoring) as general judging. Selecting a track in the admin dashboard dropdown shows that track's scores and views. Track judges' rankings do **not** affect the general scores, and general judges do not affect track scores. Track judges should still get together after judging to decide on a winner, using the track scores.
