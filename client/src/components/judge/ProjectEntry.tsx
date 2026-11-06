@@ -11,6 +11,8 @@ interface ProjectEntryProps {
     id: number;
     starCallback?: (id: number, starred: boolean) => void;
     noDrag?: boolean;
+    /* Hide the star, eg. on prize rankings, where stars don't apply */
+    noStar?: boolean;
     disabled?: boolean;
 }
 
@@ -84,13 +86,15 @@ const ProjectEntry = (props: ProjectEntryProps) => {
                         </h3>
                         <p className="text-light text-xs line-clamp-1">{props.project.notes}</p>
                     </div>
-                    <Star
-                        small
-                        active={starred}
-                        setActive={setStarred}
-                        onClick={updateStar}
-                        disabled={props.disabled}
-                    />
+                    {!props.noStar && (
+                        <Star
+                            small
+                            active={starred}
+                            setActive={setStarred}
+                            onClick={updateStar}
+                            disabled={props.disabled}
+                        />
+                    )}
                     {!props.noDrag ? (
                         <div className="text-right flex items-center justify-end">
                             <DragHamburger />

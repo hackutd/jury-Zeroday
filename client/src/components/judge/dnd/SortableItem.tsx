@@ -7,6 +7,7 @@ interface SortableItemProps {
     ranking: number;
     children?: React.ReactNode;
     disabled?: boolean;
+    noStar?: boolean;
 }
 
 const SortableItem = (props: SortableItemProps) => {

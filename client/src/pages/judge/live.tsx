@@ -263,9 +263,13 @@ const JudgeLive = () => {
         });
         if (res.status !== 200) {
             errorAlert(res);
+            navigate('/judge');
+            return;
         }
 
-        navigate('/judge');
+        // Pass the judged project on in the URL (survives a refresh) so the judge page can
+        // queue its prize rankings
+        navigate(judge?.current ? `/judge?judged=${judge.current}` : '/judge');
     };
 
     // Display an error page if an error condition holds
