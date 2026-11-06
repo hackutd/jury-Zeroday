@@ -61,7 +61,7 @@ Set the opt-in prizes that **every** judge also ranks for, as a comma-separated 
 
 After a judge finishes a project and ranks it as usual, the **Next** button takes them to one extra ranking screen for each listed prize that the project opted into, then back to their dashboard. On that screen they rank only the projects they've seen that opted into that prize. Judges can also edit any prize ranking later from the **Prize Rankings** buttons on their dashboard.
 
-On the admin dashboard, a prize dropdown appears next to the toolbar buttons. Picking a prize shows only the projects that opted into it, sorted by their **Prize Score** (highest first). Prize scores use the same Copeland method as the general score, summed over every judge's ranking for that prize. Prize Rankings are separate from [track judging](/docs/usage/admin/tracks): they don't change which projects judges are sent to, and they don't affect the general score. **Clear Rankings and Stars** and **Clear Judging Data** also clear prize rankings.
+On the admin dashboard, a prize dropdown appears next to the toolbar buttons. Picking a prize shows only the projects that opted into it, sorted by their **Prize Score** (highest first). Prize scores use the same Copeland method as the general score, summed over every judge's ranking for that prize. Prize Rankings are separate from [track judging](/docs/usage/admin/tracks): they don't change which projects judges are sent to, and they don't affect the general score. **Clear Rankings** and **Clear Judging Data** also clear prize rankings.
 
 **Best Beginner** is hardcoded as a filter only. It is always in the prize dropdown, and picking it shows the projects whose opt-in prizes contain "Best Beginner" (eg. "Best Beginner Hack"), sorted by their **general** score. Judges never get a ranking screen for it, and it is dropped if you add it to the Prize Rankings list.
 
@@ -84,7 +84,7 @@ The CSV-only zip without emails is still available from the API at [`/admin/expo
 
 At the bottom of the settings page, there are multiple ways to reset data in Jury:
 
-- **Clear Rankings and Stars**: This will remove all rankings that judges have made but keep all other info (judges, projects, settings).
+- **Clear Rankings**: This will remove all rankings that judges have made (including prize rankings) but keep all other info (judges, projects, settings).
 - **Clear Judging Data**: On top of removing scores, this will also remove all views and judging progress, resetting Jury to right before judging started.
 - **Delete all Projects**: This will delete all projects, judging data, and flags. It will not delete settings and judges.
 - **Delete all Judges**: This will delete all judges, judging data, and flags. It will not delete settings and projects.
