@@ -74,6 +74,7 @@ func RunTests(context *util.Context) {
 				"Export By Challenges With Team Members": ExportByChallengesWithTeamMembers,
 				"Export Participants CSV":                ExportParticipantsCSV,
 				"Export Discord CSV":                     ExportDiscordCSV,
+				"Export Prizes Zip":                      ExportPrizesZip,
 			},
 		},
 		{
@@ -88,6 +89,7 @@ func RunTests(context *util.Context) {
 				"Judge Notes Update":             JudgeNotesUpdate,
 				"Judge Next With No Projects":    JudgeNextWithNoActiveProjects,
 				"Concurrent Judges Get Projects": ConcurrentJudgesGetProjects,
+				"Prize Rankings End To End":      PrizeRankingsEndToEnd,
 			},
 		},
 		{
