@@ -514,7 +514,7 @@ func CreateProjectCSV(projects []*models.Project) []byte {
 // CreateChallengeProjectCSV creates a printable CSV of projects for a single challenge,
 // with only table, name, and project links (sized to print on A4 landscape), sorted by table number.
 // If includeTeamMembers is true, each team member's name and email are added after the links, in the
-// "Member N Name" then "Member N Email" columns (sized to the biggest team in this challenge). Contains PII.
+// same columns as the participants export (sized to the biggest team in this challenge). Contains PII.
 func CreateChallengeProjectCSV(projects []*models.Project, includeTeamMembers bool) []byte {
 	csvBuffer := &bytes.Buffer{}
 
@@ -548,8 +548,8 @@ func CreateChallengeProjectCSV(projects []*models.Project, includeTeamMembers bo
 	return csvBuffer.Bytes()
 }
 
-// CreateParticipantsCSV creates a CSV with one row per project (table number, project name and
-// Devpost link), sorted by table number, to share with participants. It never includes team members.
+// CreateParticipantsCSV creates a CSV with one row per project and every team member's name and
+// email, for emailing teams their table, sorted by table number. Contains PII: admin only.
 func CreateParticipantsCSV(projects []*models.Project) []byte {
 	csvBuffer := &bytes.Buffer{}
 
@@ -561,12 +561,17 @@ func CreateParticipantsCSV(projects []*models.Project) []byte {
 	copy(sorted, projects)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Location < sorted[j].Location })
 
+	// One name and one email column per member, sized to the biggest team
+	maxMembers := largestTeamSize(sorted)
+
 	// Write the header
-	w.Write([]string{"Table", "Project", "Devpost"})
+	header := []string{"Table", "Project", "Devpost"}
+	w.Write(append(header, teamMemberHeader(maxMembers)...))
 
 	// Write each project
 	for _, project := range sorted {
-		w.Write([]string{fmt.Sprintf("%d", project.Location), project.Name, project.Url})
+		row := []string{fmt.Sprintf("%d", project.Location), project.Name, project.Url}
+		w.Write(append(row, teamMemberCells(project, maxMembers)...))
 	}
 
 	// Flush the writer

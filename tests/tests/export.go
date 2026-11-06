@@ -110,9 +110,9 @@ Team Project,https://devpost.com/1-team,Submitted (Gallery/Visible),Pending,Subm
 Solo Project,https://devpost.com/2-solo,Submitted (Hidden),Pending,Submit,,,,About,,,,,,go,Dee,Ray,dee@example.com,,,0
 Untitled,,Draft,Pending,Manage team,,,,,,,,,,,Eve,Fox,eve@example.com,,,0`
 
-// ExportParticipantsCSV verifies that /admin/export/participants lists only each project's table,
-// name and Devpost link sorted by table, and that team member names and emails from the Devpost PII
-// import never show up in it or in other project responses
+// ExportParticipantsCSV verifies that importing the Devpost PII export stores team members, that
+// /admin/export/participants lists their names and emails in separate columns sorted by table, and that
+// the emails never show up in other project responses
 func ExportParticipantsCSV(context *util.Context) util.Result {
 	if res := resetProjects(context); !res.Success {
 		return res
@@ -142,9 +142,9 @@ func ExportParticipantsCSV(context *util.Context) util.Result {
 		return util.NewResult(false, "Could not parse participants CSV: "+err.Error())
 	}
 	want := [][]string{
-		{"Table", "Project", "Devpost"},
-		{"10", "Solo Project", "https://devpost.com/2-solo"},
-		{"50", "Team Project", "https://devpost.com/1-team"},
+		{"Table", "Project", "Devpost", "Member 1 Name", "Member 2 Name", "Member 3 Name", "Member 1 Email", "Member 2 Email", "Member 3 Email"},
+		{"10", "Solo Project", "https://devpost.com/2-solo", "Dee Ray", "", "", "dee@example.com", "", ""},
+		{"50", "Team Project", "https://devpost.com/1-team", "Ann Lee", "Bob Kim", "carlusername", "ann@example.com", "bob@example.com", "carl@example.com"},
 	}
 	if len(rows) != len(want) {
 		return util.NewResult(false, fmt.Sprintf("Participants CSV should have %d rows, got %v", len(want), rows))
@@ -161,7 +161,7 @@ func ExportParticipantsCSV(context *util.Context) util.Result {
 	}
 
 	// Emails must not leak through other project responses or exports
-	for _, url := range []string{"/admin/export/participants", "/project/list", "/project/list/public", "/admin/export/projects"} {
+	for _, url := range []string{"/project/list", "/project/list/public", "/admin/export/projects"} {
 		_, listBody := util.GetRequestWithStatus(context.Logger, url, util.AdminAuth())
 		if strings.Contains(listBody, "@example.com") {
 			return util.NewResult(false, url+" should not include team member emails")
@@ -170,8 +170,8 @@ func ExportParticipantsCSV(context *util.Context) util.Result {
 	return util.ResultOk()
 }
 
-// ExportByChallengesWithTeamMembers verifies that ?team_members=true adds the team member name and
-// email columns (from the Devpost PII import) to each prize CSV, and that they are left out without it
+// ExportByChallengesWithTeamMembers verifies that ?team_members=true adds the participants export's
+// member name and email columns to each prize CSV, and that they are left out without it
 func ExportByChallengesWithTeamMembers(context *util.Context) util.Result {
 	if res := resetProjects(context); !res.Success {
 		return res
