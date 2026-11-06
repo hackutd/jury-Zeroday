@@ -28,6 +28,45 @@ const Description = ({ children: c }: { children: React.ReactNode }) => (
     <p className="text-sm md:text-md text-light mb-[0.125rem]">{c}</p>
 );
 
+// What each export button downloads, and whether it is safe to share outside the organizers
+const EXPORT_LEGEND: { name: string; file: string; contents: string; share: boolean }[] = [
+    {
+        name: 'Export Judges',
+        file: 'CSV',
+        contents:
+            'Every judge: name, email, notes, login code, active, seen count and last activity.',
+        share: false,
+    },
+    {
+        name: 'Export Projects',
+        file: 'CSV',
+        contents:
+            'Every project: name, table, description, links, opt-in prizes, seen count, active and last activity.',
+        share: false,
+    },
+    {
+        name: 'Export by Challenges',
+        file: 'ZIP',
+        contents:
+            'Two folders, one file per opt-in prize. csv-with-emails/ has the table, name, Devpost and Try It Out links plus team member names and emails (organizers only). pdf/ has a printable list of table numbers and project names (safe to hand to sponsors).',
+        share: false,
+    },
+    {
+        name: 'Export Participants',
+        file: 'CSV',
+        contents:
+            'Every project: table number, project name and Devpost link, sorted by table. No team members or emails.',
+        share: true,
+    },
+    {
+        name: 'Export Rankings',
+        file: 'CSV',
+        contents:
+            'Each judge who ranked: name, login code and the table numbers they ranked (general rankings only).',
+        share: false,
+    },
+];
+
 // Custom button to use on settings page
 const SettingsButton = ({
     children,
@@ -1001,12 +1040,8 @@ const AdminSettings = () => {
 
                     <SubSection>Export Collection</SubSection>
                     <Description>
-                        Export each collection individually as a CSV download. Export Participants
-                        includes every team member&apos;s name and email (from the Devpost PII
-                        export), so don&apos;t share it with participants. Export by Challenges
-                        downloads one zip with two folders: a CSV for each prize that includes team
-                        member names and emails (PII, for organizers only), and a printable PDF for
-                        each prize listing table numbers and project names to hand to sponsors.
+                        Export each collection as a download. See the legend below for what each
+                        button includes and who it is safe to share with.
                     </Description>
                     <div className="flex flex-col lg:flex-row mt-2 lg:mt-0 gap-4">
                         <SettingsButton
@@ -1042,6 +1077,34 @@ const AdminSettings = () => {
                         >
                             Export Rankings
                         </SettingsButton>
+                    </div>
+
+                    <SubSection>Legend</SubSection>
+                    <div className="flex flex-col border-2 border-lightest rounded-md divide-y-2 divide-lightest">
+                        {EXPORT_LEGEND.map((e) => (
+                            <div
+                                key={e.name}
+                                className="flex flex-col md:flex-row md:items-start gap-1 md:gap-4 p-2"
+                            >
+                                <div className="md:w-56 shrink-0 font-bold">
+                                    {e.name}{' '}
+                                    <span className="text-xs font-normal text-lighter">
+                                        ({e.file})
+                                    </span>
+                                </div>
+                                <p className="text-sm text-light grow">{e.contents}</p>
+                                <span
+                                    className={twMerge(
+                                        'text-xs font-bold whitespace-nowrap px-2 py-1 rounded-md self-start',
+                                        e.share
+                                            ? 'bg-primaryLight text-primaryDark'
+                                            : 'bg-error/20 text-errorDark'
+                                    )}
+                                >
+                                    {e.share ? 'OK to share' : 'Organizers only'}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </Card>
 
