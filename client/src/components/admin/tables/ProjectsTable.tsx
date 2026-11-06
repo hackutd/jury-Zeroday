@@ -4,7 +4,7 @@ import { useAdminStore, useAdminTableStore, useOptionsStore } from '../../../sto
 import HeaderEntry from './HeaderEntry';
 import { ProjectSortField } from '../../../enums';
 import { getRequest } from '../../../api';
-import { errorAlert } from '../../../util';
+import { errorAlert, isFilterOnlyPrize } from '../../../util';
 import AdminTable from './AdminTable';
 
 const ProjectsTable = () => {
@@ -17,6 +17,7 @@ const ProjectsTable = () => {
     });
     const options = useOptionsStore((state) => state.options);
     const selectedTrack = useOptionsStore((state) => state.selectedTrack);
+    const selectedPrize = useOptionsStore((state) => state.selectedPrize);
     const setSelected = useAdminTableStore((state) => state.setSelected);
     const projects = useAdminTableStore((state) => state.projects);
     const setProjects = useAdminTableStore((state) => state.setProjects);
@@ -65,12 +66,22 @@ const ProjectsTable = () => {
         getFlags();
     }, []);
 
+    // Best Beginner is only a filter with no prize score, so it shows the general score
+    const showPrizeScore = selectedPrize !== '' && !isFilterOnlyPrize(selectedPrize);
+
+    // When a prize is picked, sort by its score (general score for Best Beginner), highest first
+    useEffect(() => {
+        if (selectedPrize !== '') {
+            setSortState({ field: ProjectSortField.Score, ascending: false });
+        }
+    }, [selectedPrize]);
+
     // When projects change, update projects and sort
     useEffect(() => {
         setSelected(Array(unsortedProjects.length).fill(false));
 
         sortAndFilterProjects();
-    }, [sortState, selectedTrack]);
+    }, [sortState, selectedTrack, selectedPrize]);
 
     useEffect(() => {
         sortAndFilterProjects();
@@ -86,6 +97,18 @@ const ProjectsTable = () => {
                       )
                   )
                 : unsortedProjects;
+
+        // Then filter to the projects that opted into the selected prize
+        const prizeFilteredProjects =
+            selectedPrize !== ''
+                ? filteredProjects.filter((project) =>
+                      project.challenge_list.some((c) =>
+                          isFilterOnlyPrize(selectedPrize)
+                              ? isFilterOnlyPrize(c)
+                              : c.toLowerCase() === selectedPrize.toLowerCase()
+                      )
+                  )
+                : filteredProjects;
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         let sortFunc = (_: Project, b: Project) => 0;
@@ -113,22 +136,17 @@ const ProjectsTable = () => {
                 break;
             case ProjectSortField.Score:
                 sortFunc = (a, b) => {
+                    if (showPrizeScore) {
+                        const aps = a.prize_scores?.[selectedPrize] ?? 0;
+                        const bps = b.prize_scores?.[selectedPrize] ?? 0;
+                        return (aps - bps) * asc;
+                    }
                     if (options.judge_tracks && selectedTrack !== '') {
                         const ats = a.track_scores?.[selectedTrack] ?? 0;
                         const bts = b.track_scores?.[selectedTrack] ?? 0;
                         return (ats - bts) * asc;
                     }
                     return (a.score - b.score) * asc;
-                };
-                break;
-            case ProjectSortField.Stars:
-                sortFunc = (a, b) => {
-                    if (options.judge_tracks && selectedTrack !== '') {
-                        const ats = a.track_stars[selectedTrack] ?? 0;
-                        const bts = b.track_stars[selectedTrack] ?? 0;
-                        return (ats - bts) * asc;
-                    }
-                    return (a.stars - b.stars) * asc;
                 };
                 break;
             case ProjectSortField.Seen:
@@ -145,7 +163,7 @@ const ProjectsTable = () => {
                 sortFunc = (a, b) => (a.last_activity - b.last_activity) * asc;
                 break;
         }
-        setProjects(filteredProjects.toSorted(sortFunc));
+        setProjects(prizeFilteredProjects.toSorted(sortFunc));
     };
 
     return (
@@ -180,15 +198,9 @@ const ProjectsTable = () => {
                     />
                 )}
                 <HeaderEntry
-                    name="Score"
+                    name={showPrizeScore ? 'Prize Score' : 'Score'}
                     updateSort={updateSort}
                     sortField={ProjectSortField.Score}
-                    sortState={sortState}
-                />
-                <HeaderEntry
-                    name="Stars"
-                    updateSort={updateSort}
-                    sortField={ProjectSortField.Stars}
                     sortState={sortState}
                 />
                 <HeaderEntry

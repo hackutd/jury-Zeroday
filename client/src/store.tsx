@@ -124,8 +124,10 @@ const useClockStore = create<ClockStore>()((set) => ({
 interface OptionsStore {
     options: Options;
     selectedTrack: string;
+    selectedPrize: string;
     fetchOptions: () => Promise<Options | null>;
     setSelectedTrack: (track: string) => void;
+    setSelectedPrize: (prize: string) => void;
 }
 
 const useOptionsStore = create<OptionsStore>((set) => ({
@@ -154,9 +156,11 @@ const useOptionsStore = create<OptionsStore>((set) => ({
         block_reqs: false,
         max_req_per_min: 0,
         disable_general_judging: false,
+        prize_rankings: [],
     },
 
     selectedTrack: '',
+    selectedPrize: '',
 
     fetchOptions: async () => {
         const optionsRes = await getRequest<Options>('/admin/options', 'admin');
@@ -165,6 +169,8 @@ const useOptionsStore = create<OptionsStore>((set) => ({
             return null;
         }
         const data = optionsRes.data as Options;
+        // Older options documents don't have prize rankings yet
+        data.prize_rankings = data.prize_rankings ?? [];
         set({ options: data });
         return data;
     },
@@ -177,6 +183,11 @@ const useOptionsStore = create<OptionsStore>((set) => ({
         }
 
         set({ selectedTrack: track });
+    },
+
+    // Opt-in prize to filter the admin projects table by ('' = all projects)
+    setSelectedPrize: (prize: string) => {
+        set({ selectedPrize: prize });
     },
 }));
 

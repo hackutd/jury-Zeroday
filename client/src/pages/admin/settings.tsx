@@ -85,13 +85,13 @@ const AdminSettings = () => {
     const [judgeTracks, setJudgeTracks] = useState(false);
     const [keepGeneral, setKeepGeneral] = useState(true);
     const [tracks, setTracks] = useState<string>('');
+    const [prizeRankings, setPrizeRankings] = useState<string>('');
     const [trackViews, setTrackViews] = useState('');
     const [groupNames, setGroupNames] = useState('');
     const [ignoreTracks, setIgnoreTracks] = useState<string>('');
     const [maxReqPerMin, setMaxReqPerMin] = useState(100);
     const [blockReqs, setBlockReqs] = useState(false);
     // Not saved, so team member emails are never in the challenge export unless picked each time
-    const [challengeExportTeamMembers, setChallengeExportTeamMembers] = useState(false);
     const [resetPopup, setResetPopup] = useState<ResetPopup>({
         open: false,
         text: '',
@@ -130,6 +130,7 @@ const AdminSettings = () => {
         setJudgeTracks(newOptions.judge_tracks);
         setKeepGeneral(!newOptions.disable_general_judging);
         setTracks(newOptions.tracks.join(', '));
+        setPrizeRankings((newOptions.prize_rankings ?? []).join(', '));
         setTrackViews(newOptions.track_views.join(', '));
         setGroupNames(newOptions.group_names.join(', '));
         setIgnoreTracks(newOptions.ignore_tracks.join(', '));
@@ -306,6 +307,25 @@ const AdminSettings = () => {
         }
 
         alert('Tracks updated!');
+        getOptions();
+    };
+
+    const updatePrizeRankings = async () => {
+        // Split prizes by comma and remove empty strings
+        const prizes = prizeRankings
+            .split(',')
+            .map((prize) => prize.trim())
+            .filter((prize) => prize !== '');
+
+        const res = await postRequest<OkResponse>('/admin/prize-rankings', 'admin', {
+            prize_rankings: prizes,
+        });
+        if (res.status !== 200 || !res.data) {
+            errorAlert(res);
+            return;
+        }
+
+        alert('Prize rankings updated!');
         getOptions();
     };
 
@@ -534,9 +554,9 @@ const AdminSettings = () => {
         saveToFile((await res.blob()) as Blob, type, 'csv');
     };
 
+    // Downloads one zip with a CSV (with team member emails) and a printable PDF for every prize
     const exportByChallenge = async () => {
-        const query = challengeExportTeamMembers ? '?team_members=true' : '';
-        const url = `${import.meta.env.VITE_JURY_URL}/admin/export/challenges${query}`;
+        const url = `${import.meta.env.VITE_JURY_URL}/admin/export/prizes`;
         const res = await fetch(url, {
             method: 'GET',
             headers: createHeaders('admin', false),
@@ -549,10 +569,7 @@ const AdminSettings = () => {
             return;
         }
 
-        const fileName = challengeExportTeamMembers
-            ? 'challenge-projects-with-emails'
-            : 'challenge-projects';
-        saveToFile((await res.blob()) as Blob, fileName, 'zip');
+        saveToFile((await res.blob()) as Blob, 'prize-exports', 'zip');
     };
 
     const saveToFile = (blob: Blob, name: string, ext: string) => {
@@ -576,6 +593,7 @@ const AdminSettings = () => {
                     <NavButton>Judging Parameters</NavButton>
                     <NavButton>Judging Clock and Timer</NavButton>
                     <NavButton>Track Judging</NavButton>
+                    <NavButton>Prize Rankings</NavButton>
                     <NavButton>Multi-Group Judging</NavButton>
                     <NavButton>Export Data</NavButton>
                     <NavButton>Reset Database</NavButton>
@@ -829,6 +847,34 @@ const AdminSettings = () => {
                         </>
                     )}
                 </Card>
+
+                <Card>
+                    <Section>Prize Rankings</Section>
+
+                    <SubSection>Set Prize Rankings</SubSection>
+                    <Description>
+                        Set the opt-in prizes that every judge also ranks for. After a judge
+                        finishes a project and ranks it, they get one extra ranking screen for each
+                        prize listed here that the project opted into. Names must match the
+                        &apos;Opt-In Prizes&apos; from Devpost (case does not matter). Prizes not
+                        listed here are not ranked. On the admin dashboard, pick a prize to only
+                        show its projects, sorted by their prize score. This is separate from track
+                        judging and does not change which projects judges are sent to. Best Beginner
+                        is always a dashboard filter (sorted by general score) and is never ranked
+                        by judges, even if it is listed here.
+                    </Description>
+                    <ChallengeBlock />
+                    <TextInput
+                        text={prizeRankings}
+                        setText={setPrizeRankings}
+                        label="List of Prizes"
+                        placeholder="Best Design, Best Use of AI, ..."
+                        large
+                        full
+                        className="my-2"
+                    />
+                    <SettingsButton onClick={updatePrizeRankings}>Update Prizes</SettingsButton>
+                </Card>
                 <Card>
                     <Section>Multi-group Judging</Section>
 
@@ -957,8 +1003,10 @@ const AdminSettings = () => {
                     <Description>
                         Export each collection individually as a CSV download. Export Participants
                         includes every team member&apos;s name and email (from the Devpost PII
-                        export), so don&apos;t share it with participants. Export by Challenges only
-                        includes them if the box below is checked.
+                        export), so don&apos;t share it with participants. Export by Challenges
+                        downloads one zip with two folders: a CSV for each prize that includes team
+                        member names and emails (PII, for organizers only), and a printable PDF for
+                        each prize listing table numbers and project names to hand to sponsors.
                     </Description>
                     <div className="flex flex-col lg:flex-row mt-2 lg:mt-0 gap-4">
                         <SettingsButton
@@ -995,12 +1043,6 @@ const AdminSettings = () => {
                             Export Rankings
                         </SettingsButton>
                     </div>
-                    <Checkbox
-                        checked={challengeExportTeamMembers}
-                        onChange={setChallengeExportTeamMembers}
-                    >
-                        Include team member names and emails in Export by Challenges
-                    </Checkbox>
                 </Card>
 
                 <Card>
