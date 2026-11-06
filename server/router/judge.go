@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"server/database"
@@ -8,6 +9,7 @@ import (
 	"server/judging"
 	"server/models"
 	"server/util"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -854,6 +856,146 @@ func JudgeRank(ctx *gin.Context) {
 	// Send OK
 	oldRanks := util.RankingToString(judge.Rankings)
 	state.Logger.JudgeLogf(judge, "Updated rankings from %s to %s", oldRanks, util.RankingToString(rankReq.Ranking))
+	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
+}
+
+// JudgePrize is one opt-in prize the judge can rank for: the projects they've seen that opted
+// into it (in the order seen) and their current ranking of those projects
+type JudgePrize struct {
+	Prize      string               `json:"prize"`
+	ProjectIds []primitive.ObjectID `json:"project_ids"`
+	Ranking    []primitive.ObjectID `json:"ranking"`
+}
+
+// prizeProjectsById returns all projects keyed by ID, for matching seen projects to prizes
+func prizeProjectsById(db *mongo.Database, ctx context.Context) (map[primitive.ObjectID]*models.Project, error) {
+	projects, err := database.FindAllProjects(db, ctx)
+	if err != nil {
+		return nil, err
+	}
+	byId := make(map[primitive.ObjectID]*models.Project, len(projects))
+	for _, p := range projects {
+		byId[p.Id] = p
+	}
+	return byId, nil
+}
+
+// GET /judge/prizes - JudgePrizes lists the ranked prizes (options.RankedPrizes) that at least one of
+// the judge's seen projects opted into, in settings order, with the judge's ranking for each
+func JudgePrizes(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get the judge from the context
+	judge := ctx.MustGet("judge").(*models.Judge)
+
+	// Get the options
+	options, err := database.GetOptions(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting options: " + err.Error()})
+		return
+	}
+
+	// Get all projects to match the judge's seen projects against each prize
+	projects, err := prizeProjectsById(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
+		return
+	}
+
+	// Build the list of prizes with at least one seen project
+	prizes := make([]JudgePrize, 0)
+	for _, prize := range options.RankedPrizes() {
+		projectIds := judging.PrizeProjectIds(judge, prize, projects)
+		if len(projectIds) == 0 {
+			continue
+		}
+		ranking := make([]primitive.ObjectID, 0)
+		for _, id := range judge.GetPrizeRanking(prize) {
+			if slices.Contains(projectIds, id) {
+				ranking = append(ranking, id)
+			}
+		}
+		prizes = append(prizes, JudgePrize{Prize: prize, ProjectIds: projectIds, Ranking: ranking})
+	}
+
+	ctx.JSON(http.StatusOK, prizes)
+}
+
+type PrizeRankRequest struct {
+	Prize   string               `json:"prize"`
+	Ranking []primitive.ObjectID `json:"ranking"`
+}
+
+// POST /judge/rank/prize - JudgeRankPrize updates the judge's ranking for one opt-in prize. Every
+// ranked project must be one the judge has seen that opted into the prize.
+func JudgeRankPrize(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get the judge from the context
+	judge := ctx.MustGet("judge").(*models.Judge)
+
+	// Get the request object
+	var req PrizeRankRequest
+	err := ctx.BindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "error reading request body: " + err.Error()})
+		return
+	}
+
+	// Wrap in transaction
+	var prize string
+	err = database.WithTransaction(state.Db, func(sc mongo.SessionContext) error {
+		// Get the options and return error if deliberations
+		options, err := database.GetOptions(state.Db, sc)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting options: " + err.Error()})
+			return err
+		}
+		if options.Deliberation {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "cannot score due to deliberation mode being enabled"})
+			return errors.New("deliberation")
+		}
+
+		// Make sure the prize is one judges rank for, using the casing from the settings
+		var ok bool
+		prize, ok = options.FindPrize(req.Prize)
+		if !ok {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "prize is not ranked by judges: " + req.Prize})
+			return errors.New("invalid prize")
+		}
+
+		// Make sure every ranked project was seen by the judge and opted into the prize
+		projects, err := prizeProjectsById(state.Db, sc)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
+			return err
+		}
+		allowed := judging.PrizeProjectIds(judge, prize, projects)
+		for i, id := range req.Ranking {
+			if !slices.Contains(allowed, id) || slices.Contains(req.Ranking[:i], id) {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid project in prize ranking: " + id.Hex()})
+				return errors.New("invalid project")
+			}
+		}
+
+		// Update the judge's prize rankings
+		judge.SetPrizeRanking(prize, req.Ranking)
+		err = database.UpdateJudgePrizeRankings(state.Db, sc, judge.Id, judge.PrizeRankings)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error updating judge prize ranking in database: " + err.Error()})
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	// Send OK
+	state.Logger.JudgeLogf(judge, "Updated %s prize ranking to %s", prize, util.RankingToString(req.Ranking))
 	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
 }
 

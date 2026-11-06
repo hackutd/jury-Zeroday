@@ -27,7 +27,9 @@ type Judge struct {
 	Rankings     []primitive.ObjectID `bson:"rankings" json:"rankings"`
 	RankingsAgg  []AggRanking         `bson:"rankings_agg" json:"rankings_agg"` // Aggregation for ranking scoring
 	Flagged      []primitive.ObjectID `bson:"flagged" json:"flagged"`           // Projects that the judge has flagged (not ranked)
-	LastActivity primitive.DateTime   `bson:"last_activity" json:"last_activity"`
+	// The judge's ranking for each opt-in prize in options.PrizeRankings. Missing in old judge documents
+	PrizeRankings []PrizeRanking     `bson:"prize_rankings" json:"prize_rankings"`
+	LastActivity  primitive.DateTime `bson:"last_activity" json:"last_activity"`
 }
 
 type JudgedProject struct {
@@ -37,6 +39,34 @@ type JudgedProject struct {
 	Name        string             `bson:"name" json:"name"`
 	Location    int64              `bson:"location" json:"location"`
 	Description string             `bson:"description" json:"description"`
+}
+
+// PrizeRanking is a judge's ranking of the projects they've seen for one opt-in prize. Stored as a
+// list instead of a map so prize names with dots or dollar signs are safe as Mongo data
+type PrizeRanking struct {
+	Prize   string               `bson:"prize" json:"prize"`
+	Ranking []primitive.ObjectID `bson:"ranking" json:"ranking"`
+}
+
+// GetPrizeRanking returns the judge's ranking for the given prize (exact name), or an empty ranking
+func (j *Judge) GetPrizeRanking(prize string) []primitive.ObjectID {
+	for _, pr := range j.PrizeRankings {
+		if pr.Prize == prize {
+			return pr.Ranking
+		}
+	}
+	return []primitive.ObjectID{}
+}
+
+// SetPrizeRanking replaces the judge's ranking for the given prize (exact name), adding it if missing
+func (j *Judge) SetPrizeRanking(prize string, ranking []primitive.ObjectID) {
+	for i, pr := range j.PrizeRankings {
+		if pr.Prize == prize {
+			j.PrizeRankings[i].Ranking = ranking
+			return
+		}
+	}
+	j.PrizeRankings = append(j.PrizeRankings, PrizeRanking{Prize: prize, Ranking: ranking})
 }
 
 type AggRanking struct {
@@ -64,6 +94,8 @@ func NewJudge(name string, email string, track string, notes string, group int64
 		RankingsAgg:  []AggRanking{},
 		Flagged:      []primitive.ObjectID{},
 		LastActivity: primitive.DateTime(0),
+
+		PrizeRankings: []PrizeRanking{},
 	}
 }
 
