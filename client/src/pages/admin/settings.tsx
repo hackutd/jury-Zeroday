@@ -59,6 +59,13 @@ const EXPORT_LEGEND: { name: string; file: string; contents: string; share: bool
         share: true,
     },
     {
+        name: 'Export for Discord',
+        file: 'CSV',
+        contents:
+            'Every project: project name, table number and Devpost link, sorted A-Z by project name. No team members or emails.',
+        share: true,
+    },
+    {
         name: 'Export Rankings',
         file: 'CSV',
         contents:
