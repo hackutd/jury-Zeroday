@@ -68,6 +68,8 @@ Judges shouldn't have to flag projects often, and you should always send an orga
 
 Once judges finish viewing a project, instruct them to rank the project among the other projects they've seen. If they want to take a break at any point, they can do so freely simply by not requesting another project to view. We ask judges to finish judging the project they are on before taking a break as **when judges are assigned a project, no other judge can see that project**! To get to their next project, they simply click the **Next Project** button at the top.
 
+If [Prize Rankings](/docs/usage/admin/configuration#prize-rankings) are set and the project they just finished opted into one of those prizes, the button at the top says **Next: Rank for _prize_** instead. It walks them through one ranking screen per matching prize, showing only the projects they've seen that opted into that prize, and then back to the dashboard where **Next Project** appears again.
+
 :::tip
 It helps organizers greatly if judges rank immediately after seeing a project--organizers can see which projects are leading and can start considering winners/checking for cheating ahead of time.
 :::

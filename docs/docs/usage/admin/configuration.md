@@ -55,6 +55,16 @@ In this section, you can toggle the multi-group judging and track judging option
 - [Track Judging](/docs/usage/admin/tracks)
 - [Multi-Group Judging](/docs/usage/admin/groups)
 
+### Prize Rankings
+
+Set the opt-in prizes that **every** judge also ranks for, as a comma-separated list (the Devpost challenge list is shown above the box for reference). Names are matched against each project's Devpost "Opt-In Prizes" ignoring case; opt-in prizes not listed here are not ranked.
+
+After a judge finishes a project and ranks it as usual, the **Next** button takes them to one extra ranking screen for each listed prize that the project opted into, then back to their dashboard. On that screen they rank only the projects they've seen that opted into that prize. Judges can also edit any prize ranking later from the **Prize Rankings** buttons on their dashboard.
+
+On the admin dashboard, a prize dropdown appears next to the toolbar buttons. Picking a prize shows only the projects that opted into it, sorted by their **Prize Score** (highest first). Prize scores use the same Copeland method as the general score, summed over every judge's ranking for that prize. Prize Rankings are separate from [track judging](/docs/usage/admin/tracks): they don't change which projects judges are sent to, and they don't affect the general score. **Clear Rankings and Stars** and **Clear Judging Data** also clear prize rankings.
+
+**Best Beginner** is hardcoded as a filter only. It is always in the prize dropdown, and picking it shows the projects whose opt-in prizes contain "Best Beginner" (eg. "Best Beginner Hack"), sorted by their **general** score. Judges never get a ranking screen for it, and it is dropped if you add it to the Prize Rankings list.
+
 ### Export Data
 
 This section allows you to export data from Jury as a CSV. There are 5 groupings to export:
@@ -62,11 +72,13 @@ This section allows you to export data from Jury as a CSV. There are 5 groupings
 - **Export Judges** - Exports all judges
 - **Export Projects** - Exports all projects
 - **Export Rankings** - Exports only the judges and their individual rankings of projects
-- **Export by Challenges** - Exports a zip file, with each CSV file containing only the projects that submitted to a specific challenge; each CSV will be titled with that challenge name
+- **Export by Challenges** - Exports `prize-exports.zip` with two folders, each with one file per challenge (opt-in prize), named after the challenge (characters like `/` and `:` become `-`):
+    - `csv-with-emails/` - the projects that submitted to that challenge, sorted by table, with Table, Name, Devpost and Try It Out columns followed by every team member's name and email (the same member columns as Export Participants). These contain personal info, so keep them with organizers.
+    - `pdf/` - a printable list to hand to that prize's sponsor: the prize name at the top of every page, then each project's table number and name in large text, sorted by table, with page numbers. No personal info. Emoji and other symbols in names are left out, and letters outside Western European alphabets print as `?`.
 - **Export Participants** - Exports one row per project with every team member's name and email (the member columns are only filled in if projects were imported from the Devpost export _with_ personal info)
 - **Export for Discord** - Exports every project's name, table number and Devpost URL (in that column order), sorted alphabetically by project name (ignoring case), so hackers can look up their table in a list posted to Discord. It has no personal info, and includes hidden projects too
 
-Under the buttons, **Include team member names and emails in Export by Challenges** adds the same member name and email columns as Export Participants to every challenge CSV, after the usual Table, Name, Devpost and Try It Out columns. The download is named `challenge-projects-with-emails.zip` so it is easy to tell apart. The box is unchecked every time the page loads, so check it only when a sponsor actually needs to contact teams.
+The CSV-only zip without emails is still available from the API at [`/admin/export/challenges`](/docs/reference/internal-api#get-adminexportchallenges).
 
 ### Reset Data
 
