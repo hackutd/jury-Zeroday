@@ -55,8 +55,8 @@ const EXPORT_LEGEND: { name: string; file: string; contents: string; share: bool
         name: 'Export Participants',
         file: 'CSV',
         contents:
-            'Every project: table number, project name and Devpost link, sorted by table. No team members or emails.',
-        share: true,
+            "Every project: table number, project name and Devpost link, then each team member's name and email (from the Devpost export with personal info), sorted by table.",
+        share: false,
     },
     {
         name: 'Export for Discord',
