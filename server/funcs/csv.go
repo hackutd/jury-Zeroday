@@ -192,6 +192,21 @@ func checkDevpostHeader(header []string) error {
 	return nil
 }
 
+// devpostHackUTDTrackHeader is the start of the (normalized) header of HackUTD's custom Devpost
+// question "What HackUTD track would you like to apply to? (You will automatically be considered for General)"
+const devpostHackUTDTrackHeader = "what hackutd track would you like to apply to"
+
+// findDevpostHackUTDTrackColumn finds the HackUTD track question by header name, since custom
+// questions move between exports. Returns -1 if the export doesn't have it.
+func findDevpostHackUTDTrackColumn(header []string) int {
+	for i, h := range header {
+		if strings.HasPrefix(normalizeDevpostHeader(h), devpostHackUTDTrackHeader) {
+			return i
+		}
+	}
+	return -1
+}
+
 // parseDevpostChallenges splits the Opt-In Prizes cell into a list, trimming entries and dropping empty ones
 func parseDevpostChallenges(cell string) []string {
 	challengeList := []string{}
@@ -315,6 +330,7 @@ func parseDevpostTeam(record []string, cols []devpostTeamCols, extraFrom int) []
 //  14. Built With - ignore
 //  15. (and remaining columns) Notes, team info, and custom questions - ignore, except
 //     Submitter / Team Member N First Name, Last Name, Email (PII export only, found by header name)
+//     and "What HackUTD track would you like to apply to?" - hackutd_track (found by header name)
 func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, error) {
 	r := csv.NewReader(strings.NewReader(content))
 	r.FieldsPerRecord = -1 // PII export rows end after the team's last member, so lengths vary
@@ -333,6 +349,7 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 		return nil, err
 	}
 	teamCols, teamExtraFrom := findDevpostTeamColumns(header)
+	trackCol := findDevpostHackUTDTrackColumn(header)
 
 	// Get the starting table number
 	tableNum, err := database.GetMaxTableNum(db, context.Background())
@@ -397,6 +414,9 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 			challengeList,
 		))
 		projects[len(projects)-1].TeamMembers = parseDevpostTeam(record, teamCols, teamExtraFrom)
+		if trackCol != -1 && trackCol < len(record) {
+			projects[len(projects)-1].HackUTDTrack = strings.TrimSpace(record[trackCol])
+		}
 	}
 
 	return projects, nil

@@ -232,3 +232,13 @@ func TestCreateDiscordCSV(t *testing.T) {
 		}
 	}
 }
+
+func TestFindDevpostHackUTDTrackColumn(t *testing.T) {
+	header := []string{"Project Title", "Opt-In Prizes", "Notes", "\xef\xbb\xbf What HackUTD track would you like to apply to? (You will automatically be considered for General) ", "Team Member 1 Email"}
+	if got := findDevpostHackUTDTrackColumn(header); got != 3 {
+		t.Fatalf("expected the track question at column 3, got %d", got)
+	}
+	if got := findDevpostHackUTDTrackColumn([]string{"Project Title", "Opt-In Prizes"}); got != -1 {
+		t.Fatalf("expected -1 when the export has no track question, got %d", got)
+	}
+}
