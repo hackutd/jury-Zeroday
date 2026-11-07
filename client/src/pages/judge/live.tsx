@@ -19,6 +19,7 @@ import data from '../../data.json';
 import TextInput from '../../components/TextInput';
 import { Helmet } from 'react-helmet';
 import { useGroupInfoStore } from '../../store';
+import { pendingPrizes } from './prize';
 
 const infoPages = ['paused', 'hidden', 'no-projects', 'done', 'doneTrack'];
 const infoData = [
@@ -145,6 +146,17 @@ const JudgeLive = () => {
             return;
         }
 
+        // Don't hand out a new project until the last one is ranked for each of its prizes
+        const prizesRes = await getRequest<JudgePrize[]>('/judge/prizes', 'judge');
+        if (prizesRes.status !== 200) {
+            errorAlert(prizesRes);
+            return;
+        }
+        if (pendingPrizes(theJudge, prizesRes.data as JudgePrize[]).length > 0) {
+            navigate('/judge');
+            return;
+        }
+
         // Otherwise, query for the next project to judge
         const newProject = await postRequest<NextJudgeProject>('/judge/next', 'judge', null);
         if (newProject.status !== 200) {
@@ -265,9 +277,8 @@ const JudgeLive = () => {
             return;
         }
 
-        // Pass the judged project on in the URL (survives a refresh) so the judge page can
-        // queue its prize rankings
-        navigate(judge?.current ? `/judge?judged=${judge.current}` : '/judge');
+        // The judge page shows the prize rankings this project still needs, if any
+        navigate('/judge');
     };
 
     // Display an error page if an error condition holds

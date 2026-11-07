@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Container from '../../components/Container';
 import JuryHeader from '../../components/JuryHeader';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
 import StatBlock from '../../components/StatBlock';
 import Loading from '../../components/Loading';
@@ -9,11 +9,10 @@ import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
-import { prizeQueueUrl } from './prize';
+import { pendingPrizes, prizeQueueUrl } from './prize';
 
 const Judge = () => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const [prizes, setPrizes] = useState<JudgePrize[]>([]);
     const [judge, setJudge] = useState<Judge | null>(null);
     const [loaded, setLoaded] = useState(false);
@@ -92,12 +91,9 @@ const Judge = () => {
 
     if (!loaded || !judge) return <Loading disabled={!loaded || !judge} />;
 
-    // Right after finishing a project, queue a ranking screen for each prize it opted into
-    // It's kept in the URL (?judged=<id>) so a refresh keeps the prize queue
-    const justJudged = searchParams.get('judged');
-    const prizeQueue = justJudged
-        ? prizes.filter((p) => p.project_ids.includes(justJudged)).map((p) => p.prize)
-        : [];
+    // After finishing a project, the judge must rank it for each prize it opted into before getting
+    // the next project. This comes from the saved rankings, so a refresh or the Back link keeps it.
+    const prizeQueue = pendingPrizes(judge, prizes);
 
     return (
         <>

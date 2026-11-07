@@ -24,9 +24,12 @@ interface RankingProps {
 
     /* If set, rank only the seen projects that opted into this prize, saved as the prize ranking */
     prize?: JudgePrize;
+
+    /* Called with the saved ranking (project IDs, best first) after each successful save */
+    onSave?: (ranking: string[]) => void;
 }
 
-const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
+const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
     const [activeId, setActiveId] = useState<number | null>(null);
     const [activeDropzone, setActiveDropzone] = useState<string | null>(null);
     const [disabled, setDisabled] = useState(false);
@@ -178,6 +181,7 @@ const Ranking = ({ judge, deliberation, prize }: RankingProps) => {
             errorAlert(saveRes);
             return;
         }
+        onSave?.(ranking);
     };
 
     if (!loaded) {
