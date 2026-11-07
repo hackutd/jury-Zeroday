@@ -9,7 +9,7 @@ import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
-import { pendingPrizes, prizeQueueUrl } from './prize';
+import { lastJudgedProject, pendingPrizes, prizeQueueUrl } from './prize';
 
 const Judge = () => {
     const navigate = useNavigate();
@@ -91,10 +91,15 @@ const Judge = () => {
 
     if (!loaded || !judge) return <Loading disabled={!loaded || !judge} />;
 
-    // After finishing a project, remind the judge to rank it for its HackUTD track (if Prize Rankings
-    // is on for that track). This comes from the saved rankings, so a refresh or the Back link keeps
-    // the reminder. They can still skip.
-    const prizeQueue = pendingPrizes(judge, prizes);
+    // After finishing a project, the judge must rank it for its HackUTD track (if Prize Rankings is on
+    // for that track) before getting another project: Next Project is replaced by the prize ranking
+    // button. This comes from the saved rankings, so a refresh or the Back link keeps it. Not during
+    // deliberation, when rankings are frozen.
+    const prizeQueue = deliberation ? [] : pendingPrizes(judge, prizes);
+    const lastSeen = judge.seen_projects.find((p) => p.project_id === lastJudgedProject(judge));
+    const lastName = lastSeen
+        ? `Table ${lastSeen.location}: ${lastSeen.name}`
+        : 'your last project';
 
     return (
         <>
@@ -122,14 +127,10 @@ const Judge = () => {
                         </Button>
                     )}
                     {prizeQueue.length > 0 && (
-                        <>
-                            <p className="text-goldDark text-sm text-center mt-2">
-                                Reminder: rank your last project for {prizeQueue.join(', ')}.
-                            </p>
-                            <Button type="outline" full href="/judge/live" className="mt-2">
-                                Skip to Next Project
-                            </Button>
-                        </>
+                        <p className="text-goldDark text-sm text-center mt-2">
+                            Reminder: rank <b>{lastName}</b> for {prizeQueue.join(', ')} before your
+                            next project.
+                        </p>
                     )}
                 </div>
                 <div className="flex justify-evenly">
@@ -139,8 +140,12 @@ const Judge = () => {
                 <Ranking judge={judge} deliberation={deliberation} />
                 {prizes.length > 0 && (
                     <>
-                        <h2 className="text-primary text-xl font-bold mt-6">Prize Rankings</h2>
-                        <p className="text-light text-sm">Edit your ranking for a prize.</p>
+                        <h2 className="text-primary text-xl font-bold mt-6">
+                            Prize Rankings{' '}
+                            <span className="text-light text-sm font-normal">
+                                (tap a prize to re-rank its projects)
+                            </span>
+                        </h2>
                         <div className="h-[1px] w-full bg-light my-2"></div>
                         <div className="flex flex-wrap gap-2">
                             {prizes.map((p) => (
