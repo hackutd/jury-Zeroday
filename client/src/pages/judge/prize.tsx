@@ -6,7 +6,6 @@ import JuryHeader from '../../components/JuryHeader';
 import Button from '../../components/Button';
 import Back from '../../components/Back';
 import Loading from '../../components/Loading';
-import ConfirmPopup from '../../components/ConfirmPopup';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
@@ -16,8 +15,8 @@ export const lastJudgedProject = (judge: Judge) =>
     judge.seen_projects[judge.seen_projects.length - 1]?.project_id ?? null;
 
 // The prizes (in settings order) the judge hasn't ranked their most recently finished project for
-// yet: the ranked prizes it opted into, where it isn't in the judge's prize ranking. Used to remind
-// judges; they can still skip.
+// yet: the ranked prizes for its HackUTD track, where it isn't in the judge's prize ranking. Judges
+// must rank it for these before their next project (enforced by the judge page buttons only).
 export const pendingPrizes = (judge: Judge, prizes: JudgePrize[]) => {
     const last = lastJudgedProject(judge);
     if (!last) return [];
@@ -31,8 +30,9 @@ export const prizeQueueUrl = (prizes: string[]) =>
     '/judge/prize?' + prizes.map((p) => `queue=${encodeURIComponent(p)}`).join('&');
 
 /**
- * Ranking screen for one opt-in prize. The URL holds a queue of prizes (?queue=A&queue=B), so after
- * ranking a project the judge goes through each matching prize in order, then back to /judge.
+ * Ranking screen for one prize (a HackUTD track). The URL holds a queue of prizes (?queue=A&queue=B),
+ * so after ranking a project the judge goes through each matching prize in order, then back to /judge.
+ * The judge can't continue until the project they just finished is in this prize's ranking.
  */
 const JudgePrizeRanking = () => {
     const navigate = useNavigate();
@@ -42,7 +42,6 @@ const JudgePrizeRanking = () => {
     const [judge, setJudge] = useState<Judge | null>(null);
     const [prize, setPrize] = useState<JudgePrize | null>(null);
     const [ranking, setRanking] = useState<string[]>([]);
-    const [skipPopup, setSkipPopup] = useState(false);
     const [deliberation, setDeliberation] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
@@ -109,8 +108,8 @@ const JudgePrizeRanking = () => {
 
     const nextLabel = queue.length > 1 ? `Next: Rank for ${queue[1]}` : 'Done';
 
-    // Remind the judge to drag the project they just finished into this prize's ranking (not during
-    // deliberation, when rankings can't change). They can still continue without it.
+    // The judge must drag the project they just finished into this prize's ranking before continuing
+    // (not during deliberation, when rankings can't change)
     const last = lastJudgedProject(judge);
     const notRanked =
         !deliberation &&
@@ -118,7 +117,11 @@ const JudgePrizeRanking = () => {
         last !== null &&
         prize.project_ids.includes(last) &&
         !ranking.includes(last);
-    const lastName = judge.seen_projects.find((p) => p.project_id === last)?.name ?? 'your project';
+    const lastSeen = judge.seen_projects.find((p) => p.project_id === last);
+    const lastName = lastSeen
+        ? `Table ${lastSeen.location}: ${lastSeen.name}`
+        : 'your last project';
+    const prizeTitle = prize?.prize ?? prizeName;
 
     return (
         <>
@@ -128,24 +131,23 @@ const JudgePrizeRanking = () => {
             <JuryHeader withLogout />
             <Container noCenter className="px-2 pb-4">
                 <Back location="/judge" />
-                <h1 className="text-2xl mt-2">Rank for {prize?.prize ?? prizeName}</h1>
+                <h1 className="text-2xl mt-2">
+                    Prize Ranking: <span className="font-bold text-primary">{prizeTitle}</span>
+                </h1>
                 <p className="text-light text-sm">
-                    Only the projects you&apos;ve seen in this HackUTD track are shown. Rank them by
-                    how well they fit this prize.
+                    This is separate from your general ranking. Only the projects you&apos;ve seen
+                    in this HackUTD track are shown. Rank them by how well they fit {prizeTitle}.
                 </p>
+                {notRanked && (
+                    <p className="p-2 text-center mt-4 border-gold border-2 bg-gold/20 rounded-md">
+                        Reminder: drag <b>{lastName}</b> into Ranked Projects for {prizeTitle} to
+                        continue.
+                    </p>
+                )}
                 <div className="w-full mb-2 mt-4">
-                    <Button
-                        type="primary"
-                        full
-                        onClick={() => (notRanked ? setSkipPopup(true) : next())}
-                    >
+                    <Button type="primary" full disabled={notRanked} onClick={next}>
                         {nextLabel}
                     </Button>
-                    {notRanked && (
-                        <p className="text-goldDark text-sm text-center mt-2">
-                            Reminder: drag {lastName} into Ranked Projects for this prize.
-                        </p>
-                    )}
                 </div>
                 {prize ? (
                     <Ranking
@@ -158,19 +160,6 @@ const JudgePrizeRanking = () => {
                     <p className="text-light mt-4">There are no projects to rank for this prize.</p>
                 )}
             </Container>
-            <ConfirmPopup
-                enabled={skipPopup}
-                setEnabled={setSkipPopup}
-                title="Not ranked yet"
-                submitText="Continue anyway"
-                onSubmit={() => {
-                    setSkipPopup(false);
-                    next();
-                }}
-            >
-                You haven&apos;t ranked {lastName} for {prize?.prize ?? prizeName}. Continue without
-                ranking it?
-            </ConfirmPopup>
         </>
     );
 };
