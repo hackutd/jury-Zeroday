@@ -19,7 +19,6 @@ import data from '../../data.json';
 import TextInput from '../../components/TextInput';
 import { Helmet } from 'react-helmet';
 import { useGroupInfoStore } from '../../store';
-import { pendingPrizes } from './prize';
 
 const infoPages = ['paused', 'hidden', 'no-projects', 'done', 'doneTrack'];
 const infoData = [
@@ -143,17 +142,6 @@ const JudgeLive = () => {
         if (theJudge.current) {
             setJudge(theJudge);
             setLoading(false);
-            return;
-        }
-
-        // Don't hand out a new project until the last one is ranked for each of its prizes
-        const prizesRes = await getRequest<JudgePrize[]>('/judge/prizes', 'judge');
-        if (prizesRes.status !== 200) {
-            errorAlert(prizesRes);
-            return;
-        }
-        if (pendingPrizes(theJudge, prizesRes.data as JudgePrize[]).length > 0) {
-            navigate('/judge');
             return;
         }
 

@@ -91,8 +91,8 @@ const Judge = () => {
 
     if (!loaded || !judge) return <Loading disabled={!loaded || !judge} />;
 
-    // After finishing a project, the judge must rank it for each prize it opted into before getting
-    // the next project. This comes from the saved rankings, so a refresh or the Back link keeps it.
+    // After finishing a project, remind the judge to rank it for each prize it opted into. This comes
+    // from the saved rankings, so a refresh or the Back link keeps the reminder. They can still skip.
     const prizeQueue = pendingPrizes(judge, prizes);
 
     return (
@@ -119,6 +119,16 @@ const Judge = () => {
                         <Button type="primary" full href="/judge/live">
                             {judge.current !== null ? 'Resume Project' : 'Next Project'}
                         </Button>
+                    )}
+                    {prizeQueue.length > 0 && (
+                        <>
+                            <p className="text-goldDark text-sm text-center mt-2">
+                                Reminder: rank your last project for {prizeQueue.join(', ')}.
+                            </p>
+                            <Button type="outline" full href="/judge/live" className="mt-2">
+                                Skip to Next Project
+                            </Button>
+                        </>
                     )}
                 </div>
                 <div className="flex justify-evenly">
