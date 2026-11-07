@@ -334,3 +334,79 @@ func ExportPrizesZip(context *util.Context) util.Result {
 	}
 	return util.ResultOk()
 }
+
+// devpostNvidiaCSV is a small Devpost PII export for the Nvidia export: Nvidia only, Nvidia + 1
+// sponsor, a project without Nvidia, and Nvidia + 2 sponsors (both Spacetime prizes count once)
+const devpostNvidiaCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email
+GPU Pair,https://devpost.com/1-pair,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,"Nvidia Track, PNC Track",go,Ann,Lee,ann@example.com,,1,Bob,Kim,bob@example.com
+GPU Solo,https://devpost.com/2-solo,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,"Nvidia Track, Best Design",go,Dee,Ray,dee@example.com,,0
+No GPU,https://devpost.com/3-none,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,PNC Track,go,Eve,Fox,eve@example.com,,0
+GPU Trio,https://devpost.com/4-trio,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,"Nvidia Track, Spacetime Track, Spacetime ScrabbleBot Prize, CBRE Track",go,Gus,Hale,gus@example.com,,0`
+
+// ExportNvidiaZip verifies that /admin/export/nvidia returns nvidia.pdf and nvidia.csv with the
+// Nvidia projects grouped by number of other sponsors and sorted by table, with emails only in
+// the CSV, and that it is admin only
+func ExportNvidiaZip(context *util.Context) util.Result {
+	if res := resetProjects(context); !res.Success {
+		return res
+	}
+	status, body := util.PostFileWithStatus(context.Logger, "/project/devpost", "csv", "devpost.csv", devpostNvidiaCSV, nil, util.AdminAuth())
+	if status != 200 || !util.IsOk(body) {
+		return util.NewResult(false, fmt.Sprintf("Devpost import failed (%d): %s", status, body))
+	}
+
+	status, body = util.GetRequestWithStatus(context.Logger, "/admin/export/nvidia", util.AdminAuth())
+	if status != 200 {
+		return util.NewResult(false, fmt.Sprintf("Export Nvidia failed (%d): %s", status, body))
+	}
+	r, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len(body)))
+	if err != nil {
+		return util.NewResult(false, "Nvidia export is not a valid zip: "+err.Error())
+	}
+	files := map[string]string{}
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return util.NewResult(false, "Could not open "+f.Name+": "+err.Error())
+		}
+		content, _ := io.ReadAll(rc)
+		rc.Close()
+		files[f.Name] = string(content)
+	}
+	pdf, okPdf := files["nvidia.pdf"]
+	csvFile, okCsv := files["nvidia.csv"]
+	if len(files) != 2 || !okPdf || !okCsv {
+		return util.NewResult(false, fmt.Sprintf("Nvidia export should have nvidia.pdf and nvidia.csv, got %d files", len(files)))
+	}
+
+	// PDF: title, groups and projects, without the non-Nvidia project or any emails
+	if !strings.HasPrefix(pdf, "%PDF-") || !strings.Contains(pdf, "(Nvidia Track) Tj") || !strings.Contains(pdf, "(GPU Solo) Tj") {
+		return util.NewResult(false, "nvidia.pdf should be a PDF with the Nvidia prize and project names")
+	}
+	if strings.Contains(pdf, "(No GPU)") || strings.Contains(pdf, "@example.com") {
+		return util.NewResult(false, "nvidia.pdf should only list Nvidia projects and have no emails")
+	}
+
+	// CSV: Nvidia only, then + 1, then + 2, with the team member emails
+	rows, err := csv.NewReader(strings.NewReader(csvFile)).ReadAll()
+	if err != nil {
+		return util.NewResult(false, "Could not parse nvidia.csv: "+err.Error())
+	}
+	got := []string{}
+	for _, row := range rows[1:] {
+		got = append(got, row[0]+"|"+row[1]+"|"+row[2])
+	}
+	want := []string{"Nvidia only|2|GPU Solo", "Nvidia + 1 sponsor|1|GPU Pair", "Nvidia + 2 sponsors|4|GPU Trio"}
+	if !slices.Equal(got, want) {
+		return util.NewResult(false, fmt.Sprintf("nvidia.csv rows should be %v, got %v", want, got))
+	}
+	if !strings.Contains(csvFile, "bob@example.com") {
+		return util.NewResult(false, "nvidia.csv should include team member emails")
+	}
+
+	// The export is admin only
+	if status, _ := util.GetRequestWithStatus(context.Logger, "/admin/export/nvidia", util.DefaultAuth()); status == 200 {
+		return util.NewResult(false, "Nvidia export must require admin auth")
+	}
+	return util.ResultOk()
+}
