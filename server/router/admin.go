@@ -938,7 +938,8 @@ func SetTracks(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
 }
 
-// POST /admin/prize-rankings - SetPrizeRankings sets the opt-in prizes every judge also ranks for.
+// POST /admin/prize-rankings - SetPrizeRankings sets the prizes every judge also ranks for, matched
+// against each project's HackUTD track (the Devpost "What HackUTD track" answer).
 // Names are trimmed, blanks dropped and duplicates (ignoring case) removed. Best Beginner is
 // dropped because it is a hardcoded filter that judges never rank for (models.IsFilterOnlyPrize).
 func SetPrizeRankings(ctx *gin.Context) {

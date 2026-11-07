@@ -16,15 +16,16 @@ func seenJudge(projects ...*models.Project) *models.Judge {
 	return judge
 }
 
-// newScoringProject returns a project with a fresh ID and the given opt-in prizes
-func newScoringProject(name string, prizes ...string) *models.Project {
-	p := models.NewProject(name, 1, 0, "", "", "", "", prizes)
+// newScoringProject returns a project with a fresh ID and the given HackUTD track
+func newScoringProject(name string, track string) *models.Project {
+	p := models.NewProject(name, 1, 0, "", "", "", "", []string{})
+	p.HackUTDTrack = track
 	p.Id = primitive.NewObjectID()
 	return p
 }
 
 func TestAggregateRankingCopeland(t *testing.T) {
-	a, b, c := newScoringProject("A"), newScoringProject("B"), newScoringProject("C")
+	a, b, c := newScoringProject("A", ""), newScoringProject("B", ""), newScoringProject("C", "")
 	judge := seenJudge(a, b, c)
 	judge.Rankings = []primitive.ObjectID{b.Id, a.Id}
 
@@ -39,14 +40,15 @@ func TestAggregateRankingCopeland(t *testing.T) {
 
 func TestAggregatePrizeScores(t *testing.T) {
 	design1 := newScoringProject("Design 1", "Best Design")
-	design2 := newScoringProject("Design 2", "best design", "Best AI") // case differs
+	design2 := newScoringProject("Design 2", " best design ") // case and spaces differ
 	ai := newScoringProject("AI", "Best AI")
-	other := newScoringProject("Other")
+	other := newScoringProject("Other", "")
+	other.ChallengeList = []string{"Best Design"} // Opt-In Prizes don't count, only the HackUTD track
 	deleted := newScoringProject("Deleted", "Best Design")
 	projects := []*models.Project{design1, design2, ai, other} // deleted is not in the list
 
 	// Judge 1 ranks Design 2 above Design 1 for Best Design, and also ranked a deleted project
-	// and a project that never opted in, which must both be ignored
+	// and a project not in the track, which must both be ignored
 	j1 := seenJudge(design1, design2, ai, other, deleted)
 	j1.SetPrizeRanking("Best Design", []primitive.ObjectID{deleted.Id, design2.Id, other.Id, design1.Id})
 
@@ -65,8 +67,8 @@ func TestAggregatePrizeScores(t *testing.T) {
 	//   j2: candidates [design1, design2], ranking [design1]          -> design1 = 1, design2 = -1
 	//   j3: candidates [design1], no ranking                         -> design1 = 0
 	// Best AI:
-	//   j1: candidates [design2, ai], no ranking -> both 0
-	//   j2: candidates [design2], no ranking     -> 0
+	//   j1: candidates [ai], no ranking -> 0
+	//   j2: no candidates
 	checks := []struct {
 		project *models.Project
 		prize   string
@@ -74,7 +76,6 @@ func TestAggregatePrizeScores(t *testing.T) {
 	}{
 		{design1, "Best Design", 0},
 		{design2, "Best Design", 0},
-		{design2, "Best AI", 0},
 		{ai, "Best AI", 0},
 	}
 	for _, c := range checks {
@@ -84,9 +85,12 @@ func TestAggregatePrizeScores(t *testing.T) {
 		}
 	}
 
-	// Projects that did not opt in get no score for the prize
+	// Projects not in the track get no score for it, even if Best Design is in their Opt-In Prizes
 	if _, ok := scores[other.Id]["Best Design"]; ok {
-		t.Fatalf("project that did not opt in should not have a Best Design score")
+		t.Fatalf("project not in the Best Design track should not have a Best Design score")
+	}
+	if _, ok := scores[design2.Id]["Best AI"]; ok {
+		t.Fatalf("Best Design project should not have a Best AI score")
 	}
 	if _, ok := scores[ai.Id]["Best Design"]; ok {
 		t.Fatalf("AI project should not have a Best Design score")
