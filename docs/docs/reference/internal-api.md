@@ -69,6 +69,7 @@ All routes are listed in `server/router/init.go` with their respective handlers.
 | [/admin/options](#post-adminoptions)                   | POST   | admin | Sets config options                          |
 | [/admin/tracks](#post-admintracks)                     | POST   | admin | Update the list of tracks                    |
 | [/admin/prize-rankings](#post-adminprize-rankings)     | POST   | admin | Update the prizes every judge ranks for      |
+| [/admin/hackutd-tracks](#get-adminhackutd-tracks)      | GET    | admin | Lists the HackUTD track answers from Devpost |
 | [/admin/track-views](#post-admintrack-views)           | POST   | admin | Update the min views per track               |
 | [/admin/num-groups](#post-adminnum-groups)             | POST   | admin | Sets num of groups and reassigns nums        |
 | [/admin/group-sizes](#post-admingroup-sizes)           | POST   | admin | Sets the size of groups and reassigns nums   |
@@ -778,9 +779,20 @@ Update the list of tracks
 
 -   **Response**: OK response
 
+### GET /admin/hackutd-tracks
+
+Lists every distinct answer to the Devpost question "What HackUTD track would you like to apply to?" from the imported projects, exactly as typed in Devpost, sorted, without blanks.
+
+-   **Auth**: admin
+-   **Response**: JSON
+
+```json
+["String"]
+```
+
 ### POST /admin/prize-rankings
 
-Update the opt-in prizes every judge also ranks for. Names are trimmed, blanks are dropped and duplicates (ignoring case) are removed.
+Update the prizes (HackUTD tracks) every judge also ranks for, matched against each project's `hackutd_track` (the Devpost "What HackUTD track" answer). Names are trimmed, blanks are dropped and duplicates (ignoring case) are removed.
 
 -   **Auth**: admin
 -   **Body**: JSON
@@ -1256,7 +1268,7 @@ Update judge rankings
 
 ### GET /judge/prizes
 
-Lists the prizes in `prize_rankings` that at least one of the judge's seen projects opted into, in settings order. `project_ids` are those seen projects (in the order seen) and `ranking` is the judge's current ranking for the prize.
+Lists the prizes in `prize_rankings` that at least one of the judge's seen projects is in (by `hackutd_track`), in settings order. `project_ids` are those seen projects (in the order seen) and `ranking` is the judge's current ranking for the prize.
 
 -   **Auth**: judge
 -   **Response**: JSON
@@ -1273,7 +1285,7 @@ Lists the prizes in `prize_rankings` that at least one of the judge's seen proje
 
 ### POST /judge/rank/prize
 
-Update the judge's ranking for one prize (matched ignoring case). Fails with 400 if the prize is not in `prize_rankings`, or if a project is listed twice or wasn't seen by the judge and opted into the prize. Fails during deliberation.
+Update the judge's ranking for one prize (matched ignoring case). Fails with 400 if the prize is not in `prize_rankings`, or if a project is listed twice or wasn't seen by the judge and in the prize's HackUTD track. Fails during deliberation.
 
 -   **Auth**: judge
 -   **Body**: JSON
