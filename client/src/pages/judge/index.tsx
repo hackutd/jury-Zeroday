@@ -91,8 +91,9 @@ const Judge = () => {
 
     if (!loaded || !judge) return <Loading disabled={!loaded || !judge} />;
 
-    // After finishing a project, remind the judge to rank it for each prize it opted into. This comes
-    // from the saved rankings, so a refresh or the Back link keeps the reminder. They can still skip.
+    // After finishing a project, remind the judge to rank it for its HackUTD track (if Prize Rankings
+    // is on for that track). This comes from the saved rankings, so a refresh or the Back link keeps
+    // the reminder. They can still skip.
     const prizeQueue = pendingPrizes(judge, prizes);
 
     return (

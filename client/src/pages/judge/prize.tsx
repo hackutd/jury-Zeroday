@@ -130,8 +130,8 @@ const JudgePrizeRanking = () => {
                 <Back location="/judge" />
                 <h1 className="text-2xl mt-2">Rank for {prize?.prize ?? prizeName}</h1>
                 <p className="text-light text-sm">
-                    Only the projects you&apos;ve seen that opted into this prize are shown. Rank
-                    them by how well they fit this prize.
+                    Only the projects you&apos;ve seen in this HackUTD track are shown. Rank them by
+                    how well they fit this prize.
                 </p>
                 <div className="w-full mb-2 mt-4">
                     <Button

@@ -7,6 +7,7 @@ interface Project {
     try_link: string;
     video_link: string;
     challenge_list: string[];
+    hackutd_track: string;
     seen: number;
     track_seen: { [track: string]: number };
     active: boolean;

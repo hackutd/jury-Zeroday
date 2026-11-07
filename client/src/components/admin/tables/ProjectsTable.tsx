@@ -98,15 +98,15 @@ const ProjectsTable = () => {
                   )
                 : unsortedProjects;
 
-        // Then filter to the projects that opted into the selected prize
+        // Then filter to the selected prize: ranked prizes match the project's HackUTD track (Devpost
+        // "What HackUTD track" answer); the Best Beginner filter still matches the Opt-In Prizes
         const prizeFilteredProjects =
             selectedPrize !== ''
                 ? filteredProjects.filter((project) =>
-                      project.challenge_list.some((c) =>
-                          isFilterOnlyPrize(selectedPrize)
-                              ? isFilterOnlyPrize(c)
-                              : c.toLowerCase() === selectedPrize.toLowerCase()
-                      )
+                      isFilterOnlyPrize(selectedPrize)
+                          ? project.challenge_list.some((c) => isFilterOnlyPrize(c))
+                          : (project.hackutd_track ?? '').trim().toLowerCase() ===
+                            selectedPrize.toLowerCase()
                   )
                 : filteredProjects;
 

@@ -22,7 +22,7 @@ interface RankingProps {
     judge: Judge | null;
     deliberation: boolean;
 
-    /* If set, rank only the seen projects that opted into this prize, saved as the prize ranking */
+    /* If set, rank only the seen projects in this prize's HackUTD track, saved as the prize ranking */
     prize?: JudgePrize;
 
     /* Called with the saved ranking (project IDs, best first) after each successful save */
