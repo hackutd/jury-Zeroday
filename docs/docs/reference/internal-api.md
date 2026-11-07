@@ -781,7 +781,7 @@ Update the list of tracks
 
 ### GET /admin/hackutd-tracks
 
-Lists every distinct answer to the Devpost question "What HackUTD track would you like to apply to?" from the imported projects, exactly as typed in Devpost, sorted, without blanks.
+Lists every distinct answer to the Devpost question "What Hack Utd Track Would You Like To Apply To?" from the imported projects, exactly as typed in Devpost, sorted, without blanks.
 
 -   **Auth**: admin
 -   **Response**: JSON
@@ -792,7 +792,7 @@ Lists every distinct answer to the Devpost question "What HackUTD track would yo
 
 ### POST /admin/prize-rankings
 
-Update the prizes (HackUTD tracks) every judge also ranks for, matched against each project's `hackutd_track` (the Devpost "What HackUTD track" answer). Names are trimmed, blanks are dropped and duplicates (ignoring case) are removed.
+Update the prizes (HackUTD tracks) every judge also ranks for, matched against each project's `hackutd_track` (the Devpost "What Hack Utd Track" answer). Names are trimmed, blanks are dropped and duplicates (ignoring case) are removed.
 
 -   **Auth**: admin
 -   **Body**: JSON

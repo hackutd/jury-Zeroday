@@ -39,7 +39,7 @@ For hackathons that use Devpost, you may simply upload the CSV of projects expor
 
 Once you have the CSV downloaded, go back into Jury and upload the CSV. It should correctly import all projects into Jury!
 
-If the export has HackUTD's custom question **"What HackUTD track would you like to apply to?"**, each project's answer is saved as its HackUTD track and used for [Prize Rankings](/docs/usage/admin/configuration#prize-rankings). The column is found by its header, wherever it is; exports without it import as usual.
+If the export has HackUTD's custom question **"What Hack Utd Track Would You Like To Apply To?"**, each project's answer is saved as its HackUTD track and used for [Prize Rankings](/docs/usage/admin/configuration#prize-rankings). The column is found by its header, wherever it is; exports without it import as usual.
 
 :::tip
 Devpost includes projects that are still drafts (haven't been submitted), but Jury automatically ignores them when importing the CSV.

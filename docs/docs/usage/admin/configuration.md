@@ -57,7 +57,7 @@ In this section, you can toggle the multi-group judging and track judging option
 
 ### Prize Rankings
 
-Set the HackUTD tracks that **every** judge also ranks for, as a comma-separated list (eg. `Best Design, Best Hardware, Virality`). Names are matched, ignoring case, against each project's answer to the Devpost question **"What HackUTD track would you like to apply to?"**, not its "Opt-In Prizes". The box above the list shows every answer found in the imported projects, exactly as typed in Devpost, so you can copy them. Tracks not listed here are not ranked. Projects imported before this question was read need to be re-imported from Devpost.
+Set the HackUTD tracks that **every** judge also ranks for, as a comma-separated list (eg. `Best Design, Best Hardware, Virality`). Names are matched, ignoring case, against each project's answer to the Devpost question **"What Hack Utd Track Would You Like To Apply To?"**, not its "Opt-In Prizes". The box above the list shows every answer found in the imported projects, exactly as typed in Devpost, so you can copy them. Tracks not listed here are not ranked. Projects imported before this question was read need to be re-imported from Devpost.
 
 After a judge finishes a project and ranks it as usual, the **Next** button takes them to one extra ranking screen if the project's HackUTD track is listed, then back to their dashboard. On that screen they rank only the projects they've seen in that track. Judges are reminded to drag the project they just finished into the ranking, and asked to confirm if they continue without it, but they can always skip (no reminder during deliberation, when rankings are frozen). Judges can also edit any prize ranking later from the **Prize Rankings** buttons on their dashboard.
 

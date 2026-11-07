@@ -47,9 +47,9 @@ func getPrizeScores(context *util.Context) (map[string]map[string]int64, util.Re
 	return out, util.ResultOk()
 }
 
-// devpostTrackCSV is a small Devpost export with HackUTD's "What HackUTD track" custom question.
+// devpostTrackCSV is a small Devpost export with HackUTD's "What Hack Utd Track" custom question.
 // "Prize None" has Best Design in its Opt-In Prizes but no track, and must not be ranked for it.
-const devpostTrackCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,What HackUTD track would you like to apply to? (You will automatically be considered for General)
+const devpostTrackCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General)
 Prize Design,https://devpost.com/1,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Design
 Prize Design 2,https://devpost.com/2,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,best design
 Prize AI,https://devpost.com/3,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best AI

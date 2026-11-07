@@ -26,7 +26,7 @@ type Project struct {
 	Prioritized   bool               `bson:"prioritized" json:"prioritized"`
 	Group         int64              `bson:"group" json:"group"`
 	LastActivity  primitive.DateTime `bson:"last_activity" json:"last_activity"`
-	// Answer to the Devpost question "What HackUTD track would you like to apply to?" (one dropdown
+	// Answer to the Devpost question "What Hack Utd Track Would You Like To Apply To?" (one dropdown
 	// value, exactly as typed in Devpost, "" if not answered). Prize Rankings match against this.
 	HackUTDTrack string `bson:"hackutd_track" json:"hackutd_track"`
 	// Team members from the Devpost PII export. Not sent in JSON (judge/admin responses),

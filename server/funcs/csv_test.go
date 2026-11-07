@@ -234,7 +234,7 @@ func TestCreateDiscordCSV(t *testing.T) {
 }
 
 func TestFindDevpostHackUTDTrackColumn(t *testing.T) {
-	header := []string{"Project Title", "Opt-In Prizes", "Notes", "\xef\xbb\xbf What HackUTD track would you like to apply to? (You will automatically be considered for General) ", "Team Member 1 Email"}
+	header := []string{"Project Title", "Opt-In Prizes", "Notes", "\xef\xbb\xbf What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General) ", "Team Member 1 Email"}
 	if got := findDevpostHackUTDTrackColumn(header); got != 3 {
 		t.Fatalf("expected the track question at column 3, got %d", got)
 	}

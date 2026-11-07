@@ -58,7 +58,7 @@ func copelandScores(ranking []primitive.ObjectID, candidates []primitive.ObjectI
 }
 
 // PrizeProjectIds returns the IDs of the projects the judge has seen whose HackUTD track (the Devpost
-// "What HackUTD track" answer, not the Opt-In Prizes) is the prize, ignoring case, in the order they
+// "What Hack Utd Track" answer, not the Opt-In Prizes) is the prize, ignoring case, in the order they
 // were seen. Seen projects that no longer exist are left out.
 func PrizeProjectIds(judge *models.Judge, prize string, projects map[primitive.ObjectID]*models.Project) []primitive.ObjectID {
 	out := make([]primitive.ObjectID, 0)

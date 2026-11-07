@@ -308,7 +308,7 @@ func GetChallenges(db *mongo.Database, ctx context.Context) ([]string, error) {
 	return challengeList, nil
 }
 
-// GetHackUTDTracks gets every distinct HackUTD track answer (the Devpost "What HackUTD track"
+// GetHackUTDTracks gets every distinct HackUTD track answer (the Devpost "What Hack Utd Track"
 // question) from the projects, exactly as typed in Devpost, sorted, without blanks
 func GetHackUTDTracks(db *mongo.Database, ctx context.Context) ([]string, error) {
 	// Get all projects

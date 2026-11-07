@@ -925,8 +925,8 @@ const AdminSettings = () => {
                     <Description>
                         Set the HackUTD tracks that every judge also ranks for. After a judge
                         finishes a project and ranks it, they get one extra ranking screen if the
-                        project&apos;s answer to &apos;What HackUTD track would you like to apply
-                        to?&apos; on Devpost is listed here. Names must match those answers, shown
+                        project&apos;s answer to &apos;What Hack Utd Track Would You Like To Apply
+                        To?&apos; on Devpost is listed here. Names must match those answers, shown
                         below exactly as typed in Devpost (case does not matter). Opt-In Prizes are
                         not used here. Tracks not listed here are not ranked. On the admin
                         dashboard, pick a prize to only show its projects, sorted by their prize

@@ -193,8 +193,8 @@ func checkDevpostHeader(header []string) error {
 }
 
 // devpostHackUTDTrackHeader is the start of the (normalized) header of HackUTD's custom Devpost
-// question "What HackUTD track would you like to apply to? (You will automatically be considered for General)"
-const devpostHackUTDTrackHeader = "what hackutd track would you like to apply to"
+// question "What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General)"
+const devpostHackUTDTrackHeader = "what hack utd track would you like to apply to"
 
 // findDevpostHackUTDTrackColumn finds the HackUTD track question by header name, since custom
 // questions move between exports. Returns -1 if the export doesn't have it.
@@ -330,7 +330,7 @@ func parseDevpostTeam(record []string, cols []devpostTeamCols, extraFrom int) []
 //  14. Built With - ignore
 //  15. (and remaining columns) Notes, team info, and custom questions - ignore, except
 //     Submitter / Team Member N First Name, Last Name, Email (PII export only, found by header name)
-//     and "What HackUTD track would you like to apply to?" - hackutd_track (found by header name)
+//     and "What Hack Utd Track Would You Like To Apply To?" - hackutd_track (found by header name)
 func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, error) {
 	r := csv.NewReader(strings.NewReader(content))
 	r.FieldsPerRecord = -1 // PII export rows end after the team's last member, so lengths vary
