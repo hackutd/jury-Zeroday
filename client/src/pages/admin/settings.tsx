@@ -66,6 +66,13 @@ const EXPORT_LEGEND: { name: string; file: string; contents: string; share: bool
         share: true,
     },
     {
+        name: 'Export for Nvidia',
+        file: 'ZIP',
+        contents:
+            'Projects that opted into Nvidia, grouped as Nvidia only, Nvidia + 1 sponsor and Nvidia + 2 sponsors, sorted by table. nvidia.pdf lists table, name and other sponsors; nvidia.csv adds links and team member names and emails.',
+        share: false,
+    },
+    {
         name: 'Export Rankings',
         file: 'CSV',
         contents:
@@ -618,6 +625,23 @@ const AdminSettings = () => {
         saveToFile((await res.blob()) as Blob, 'prize-exports', 'zip');
     };
 
+    const exportNvidia = async () => {
+        const url = `${import.meta.env.VITE_JURY_URL}/admin/export/nvidia`;
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: createHeaders('admin', false),
+        });
+
+        if (res.status !== 200) {
+            const error = 'Error exporting data: ' + res.statusText;
+            alert(error);
+            console.error(error);
+            return;
+        }
+
+        saveToFile((await res.blob()) as Blob, 'nvidia-export', 'zip');
+    };
+
     const saveToFile = (blob: Blob, name: string, ext: string) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1083,6 +1107,9 @@ const AdminSettings = () => {
                             className="my-0 lg:my-2"
                         >
                             Export Rankings
+                        </SettingsButton>
+                        <SettingsButton onClick={exportNvidia} className="my-0 lg:my-2">
+                            Export for Nvidia
                         </SettingsButton>
                     </div>
 
