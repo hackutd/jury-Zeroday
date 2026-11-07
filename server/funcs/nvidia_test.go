@@ -37,10 +37,66 @@ func TestSponsorOf(t *testing.T) {
 		"Best Beginner":                 "",
 		"Best Use of Gemini API by MLH": "",
 		"":                              "",
+		// This year's non-sponsor opt-ins, as named in the 2026 Devpost export
+		"Beginner Track -- HackUTD Track":                 "",
+		"[MLH] Best Use of Gemini API":                    "",
+		"[MLH] Best Use of Tiger Data":                    "",
+		"[MLH] Best Domain Name from GoDaddy Registry":    "",
+		"[MLH] Build Your Hackathon A-Team with SpaceXSI": "",
+		"[MLH] Best Use of MongoDB Atlas":                 "",
 	}
 	for prize, want := range cases {
 		if got := SponsorOf(prize); got != want {
 			t.Errorf("SponsorOf(%q) = %q, want %q", prize, got, want)
+		}
+	}
+}
+
+// TestNvidiaGroupsFrom2026Cells groups Opt-In Prizes cells copied from the 2026 Devpost export
+// (note the trailing space Devpost leaves after "Toyota Financial Services Track")
+func TestNvidiaGroupsFrom2026Cells(t *testing.T) {
+	cells := []struct {
+		name, cell string
+		wantGroup  int // -1 = not an Nvidia project
+	}{
+		{"Firewatch", "Nvidia Track, CBRE Track, Photon Track", 2},
+		{"Vroom Relief", "Toyota Financial Services Track , Nvidia Track, Spacetime Track", 2},
+		{"VILLAGE", "[MLH] Best Use of Tiger Data, PNC Track, Nvidia Track, Spacetime ScrabbleBot Prize", 2},
+		{"HackUTD 2026", "T-Mobile Track, Nvidia Track, Capital One Track", 2},
+		{"Solo", "Nvidia Track, Beginner Track -- HackUTD Track, [MLH] Best Use of Gemini API", 0},
+		{"My Little Toyota", "[MLH] Best Domain Name from GoDaddy Registry, Toyota Financial Services Track , Photon Track", -1},
+	}
+	projects := []*models.Project{}
+	for i, c := range cells {
+		projects = append(projects, models.NewProject(c.name, int64(i+1), 0, "", "", "", "", parseDevpostChallenges(c.cell)))
+	}
+	grouped, title := groupNvidiaProjects(projects)
+	if title != "Nvidia Track" {
+		t.Errorf("title = %q, want %q", title, "Nvidia Track")
+	}
+	got := map[string]nvidiaProject{}
+	for _, p := range grouped {
+		got[p.project.Name] = p
+	}
+	for _, c := range cells {
+		p, ok := got[c.name]
+		if c.wantGroup < 0 {
+			if ok {
+				t.Errorf("%s should not be in the Nvidia export", c.name)
+			}
+			continue
+		}
+		if !ok {
+			t.Errorf("%s missing from the Nvidia export", c.name)
+			continue
+		}
+		if p.group != c.wantGroup {
+			t.Errorf("%s: group %d, want %d (other prizes %v)", c.name, p.group, c.wantGroup, p.otherPrizes)
+		}
+		for _, prize := range p.otherPrizes {
+			if prize != strings.TrimSpace(prize) {
+				t.Errorf("%s: other prize %q not trimmed", c.name, prize)
+			}
 		}
 	}
 }
