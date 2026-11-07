@@ -202,10 +202,12 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
                 </p>
             )}
             <h2 className="text-primary text-xl font-bold mt-4">
-                {prize ? `Ranked Projects for ${prize.prize}` : 'Ranked Projects'}
+                {prize ? `Ranked Projects for ${prize.prize}` : 'General Ranking'}
             </h2>
             <p className="text-light text-sm">
-                Rank as many projects as you can. Click on titles to edit scores and see details.
+                {prize
+                    ? 'Drag projects here and order them best first. Click on titles to see details.'
+                    : "Your general ranking of every project you've seen. Rank as many projects as you can. Click on titles to edit scores and see details."}
             </p>
             <div className="h-[1px] w-full bg-light my-2"></div>
             <Droppable
@@ -215,7 +217,9 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
                 disabled={disabled || deliberation}
             />
 
-            <h2 className="text-primary text-xl font-bold mt-4">Unranked Projects</h2>
+            <h2 className="text-primary text-xl font-bold mt-4">
+                {prize ? `Unranked Projects for ${prize.prize}` : 'Unranked Projects'}
+            </h2>
             <p className="text-light text-sm">
                 Projects will be sorted in reverse chronological order.
             </p>
