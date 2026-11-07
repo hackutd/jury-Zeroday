@@ -9,7 +9,7 @@ import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
-import { lastJudgedProject, pendingPrizes, prizeQueueUrl } from './prize';
+import { pendingPrizes, prizeQueueUrl } from './prize';
 
 const Judge = () => {
     const navigate = useNavigate();
@@ -93,13 +93,9 @@ const Judge = () => {
 
     // After finishing a project, the judge must rank it for its HackUTD track (if Prize Rankings is on
     // for that track) before getting another project: Next Project is replaced by the prize ranking
-    // button. This comes from the saved rankings, so a refresh or the Back link keeps it. Not during
-    // deliberation, when rankings are frozen.
+    // button, and the reminder is shown on the prize screen. This comes from the saved rankings, so a
+    // refresh or the Back link keeps it. Not during deliberation, when rankings are frozen.
     const prizeQueue = deliberation ? [] : pendingPrizes(judge, prizes);
-    const lastSeen = judge.seen_projects.find((p) => p.project_id === lastJudgedProject(judge));
-    const lastName = lastSeen
-        ? `Table ${lastSeen.location}: ${lastSeen.name}`
-        : 'your last project';
 
     return (
         <>
@@ -125,12 +121,6 @@ const Judge = () => {
                         <Button type="primary" full href="/judge/live">
                             {judge.current !== null ? 'Resume Project' : 'Next Project'}
                         </Button>
-                    )}
-                    {prizeQueue.length > 0 && (
-                        <p className="text-goldDark text-sm text-center mt-2">
-                            Reminder: rank <b>{lastName}</b> for {prizeQueue.join(', ')} before your
-                            next project.
-                        </p>
                     )}
                 </div>
                 <div className="flex justify-evenly">
