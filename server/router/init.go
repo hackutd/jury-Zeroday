@@ -122,6 +122,7 @@ func NewRouter(db *mongo.Database, logger *logging.Logger) *gin.Engine {
 	adminRouter.POST("/admin/options", SetOptions)
 	adminRouter.POST("/admin/tracks", SetTracks)
 	adminRouter.POST("/admin/prize-rankings", SetPrizeRankings)
+	adminRouter.GET("/admin/hackutd-tracks", GetHackUTDTracks)
 	adminRouter.POST("/admin/track-views", SetTrackViews)
 	adminRouter.POST("/admin/num-groups", SetNumGroups)
 	adminRouter.POST("/admin/group-sizes", SetGroupSizes)
