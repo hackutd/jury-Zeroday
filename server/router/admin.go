@@ -1023,3 +1023,29 @@ func SetTrackViews(ctx *gin.Context) {
 	state.Logger.AdminLogf("Updated track views to %s", util.StructToStringWithoutNils(req))
 	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
 }
+
+// GET /admin/export/nvidia - ExportNvidia exports a zip with nvidia.pdf and nvidia.csv: the projects
+// that opted into Nvidia, grouped by how many other sponsors they opted into and sorted by table.
+// The CSV contains team member names and emails (PII).
+func ExportNvidia(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get all the projects
+	projects, err := database.FindAllProjects(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
+		return
+	}
+
+	// Create the zip file
+	zipData, err := funcs.CreateNvidiaExportZip(projects)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error creating zip file: " + err.Error()})
+		return
+	}
+
+	// Send zip file
+	state.Logger.AdminLogf("Exported Nvidia PDF and CSV (with team member names and emails)")
+	funcs.AddZipFile("nvidia-export", zipData, ctx)
+}
