@@ -67,7 +67,7 @@ On the admin dashboard, a prize dropdown appears next to the toolbar buttons. Pi
 
 ### Export Data
 
-This section allows you to export data from Jury. There are 6 exports, and a legend under the buttons shows what each one includes and whether it is **OK to share** or **Organizers only**:
+This section allows you to export data from Jury. There are 7 exports, and a legend under the buttons shows what each one includes and whether it is **OK to share** or **Organizers only**:
 
 - **Export Judges** - Exports all judges, including their login codes (organizers only)
 - **Export Projects** - Exports all projects (organizers only)
@@ -77,6 +77,7 @@ This section allows you to export data from Jury. There are 6 exports, and a leg
     - `pdf/` - a printable list to hand to that prize's sponsor: the prize name at the top of every page, then each project's table number and name in large text, sorted by table, with page numbers. No personal info. Emoji and other symbols in names are left out, and letters outside Western European alphabets print as `?`.
 - **Export Participants** - Exports `participants.csv` with one row per project, sorted by table: Table, Project and Devpost link, then every team member's name and email (the member columns are only filled in if projects were imported from the Devpost export _with_ personal info). Organizers only; use Export for Discord for a list to share with participants
 - **Export for Discord** - Exports every project's name, table number and Devpost URL (in that column order), sorted alphabetically by project name (ignoring case), so hackers can look up their table in a list posted to Discord. It has no personal info, and includes hidden projects too
+- **Export for Nvidia** - Exports `nvidia-export.zip` with the projects that opted into Nvidia, grouped as **Nvidia only**, **Nvidia + 1 sponsor** and **Nvidia + 2 sponsors** (and Nvidia + 3 or more, only if any), each sorted by table. `nvidia.pdf` is a printable list with the table, project name and the other sponsor prizes; `nvidia.csv` has the same order with the Devpost and Try It Out links and every team member's name and email (organizers only). Sponsors are matched by opt-in prize name ignoring case, spaces and a trailing "Track" (so `Nvidia` and `Nvidia Track` both work): Nvidia, Capital One, State Farm, CBRE, Spacetime (both Spacetime prizes count as one sponsor), Photon, T-Mobile, 8090, PNC, Goldman Sachs, EOG Resources, Winstead PC, Toyota Financial Services and NMC^2. Other opt-in prizes (Best Design, MLH prizes, ...) are not sponsors. Includes hidden projects, like the other exports
 
 The CSV-only zip without emails is still available from the API at [`/admin/export/challenges`](/docs/reference/internal-api#get-adminexportchallenges).
 
