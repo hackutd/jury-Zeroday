@@ -6,9 +6,25 @@ import JuryHeader from '../../components/JuryHeader';
 import Button from '../../components/Button';
 import Back from '../../components/Back';
 import Loading from '../../components/Loading';
+import ConfirmPopup from '../../components/ConfirmPopup';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
+
+// The project the judge finished most recently (finished projects are appended to seen_projects)
+export const lastJudgedProject = (judge: Judge) =>
+    judge.seen_projects[judge.seen_projects.length - 1]?.project_id ?? null;
+
+// The prizes (in settings order) the judge hasn't ranked their most recently finished project for
+// yet: the ranked prizes it opted into, where it isn't in the judge's prize ranking. Used to remind
+// judges; they can still skip.
+export const pendingPrizes = (judge: Judge, prizes: JudgePrize[]) => {
+    const last = lastJudgedProject(judge);
+    if (!last) return [];
+    return prizes
+        .filter((p) => p.project_ids.includes(last) && !p.ranking.includes(last))
+        .map((p) => p.prize);
+};
 
 // Builds the URL of the prize ranking page that walks through the given prizes in order
 export const prizeQueueUrl = (prizes: string[]) =>
@@ -25,6 +41,8 @@ const JudgePrizeRanking = () => {
     const prizeName = queue[0] ?? '';
     const [judge, setJudge] = useState<Judge | null>(null);
     const [prize, setPrize] = useState<JudgePrize | null>(null);
+    const [ranking, setRanking] = useState<string[]>([]);
+    const [skipPopup, setSkipPopup] = useState(false);
     const [deliberation, setDeliberation] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
@@ -65,6 +83,7 @@ const JudgePrizeRanking = () => {
                 (p) => p.prize.toLowerCase() === prizeName.toLowerCase()
             );
             setPrize(found ?? null);
+            setRanking(found?.ranking ?? []);
 
             // Get deliberation status
             const delibRes = await getRequest<OkResponse>('/judge/deliberation', 'judge');
@@ -90,6 +109,17 @@ const JudgePrizeRanking = () => {
 
     const nextLabel = queue.length > 1 ? `Next: Rank for ${queue[1]}` : 'Done';
 
+    // Remind the judge to drag the project they just finished into this prize's ranking (not during
+    // deliberation, when rankings can't change). They can still continue without it.
+    const last = lastJudgedProject(judge);
+    const notRanked =
+        !deliberation &&
+        prize !== null &&
+        last !== null &&
+        prize.project_ids.includes(last) &&
+        !ranking.includes(last);
+    const lastName = judge.seen_projects.find((p) => p.project_id === last)?.name ?? 'your project';
+
     return (
         <>
             <Helmet>
@@ -104,16 +134,43 @@ const JudgePrizeRanking = () => {
                     them by how well they fit this prize.
                 </p>
                 <div className="w-full mb-2 mt-4">
-                    <Button type="primary" full onClick={next}>
+                    <Button
+                        type="primary"
+                        full
+                        onClick={() => (notRanked ? setSkipPopup(true) : next())}
+                    >
                         {nextLabel}
                     </Button>
+                    {notRanked && (
+                        <p className="text-goldDark text-sm text-center mt-2">
+                            Reminder: drag {lastName} into Ranked Projects for this prize.
+                        </p>
+                    )}
                 </div>
                 {prize ? (
-                    <Ranking judge={judge} deliberation={deliberation} prize={prize} />
+                    <Ranking
+                        judge={judge}
+                        deliberation={deliberation}
+                        prize={prize}
+                        onSave={setRanking}
+                    />
                 ) : (
                     <p className="text-light mt-4">There are no projects to rank for this prize.</p>
                 )}
             </Container>
+            <ConfirmPopup
+                enabled={skipPopup}
+                setEnabled={setSkipPopup}
+                title="Not ranked yet"
+                submitText="Continue anyway"
+                onSubmit={() => {
+                    setSkipPopup(false);
+                    next();
+                }}
+            >
+                You haven&apos;t ranked {lastName} for {prize?.prize ?? prizeName}. Continue without
+                ranking it?
+            </ConfirmPopup>
         </>
     );
 };

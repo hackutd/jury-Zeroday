@@ -265,9 +265,8 @@ const JudgeLive = () => {
             return;
         }
 
-        // Pass the judged project on in the URL (survives a refresh) so the judge page can
-        // queue its prize rankings
-        navigate(judge?.current ? `/judge?judged=${judge.current}` : '/judge');
+        // The judge page shows the prize rankings this project still needs, if any
+        navigate('/judge');
     };
 
     // Display an error page if an error condition holds
