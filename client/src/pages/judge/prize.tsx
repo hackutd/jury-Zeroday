@@ -123,12 +123,13 @@ const JudgePrizeRanking = () => {
         : 'your last project';
     const prizeTitle = prize?.prize ?? prizeName;
 
+    // Light blue page background so the prize screen can't be mistaken for the general ranking
     return (
-        <>
+        <div className="flex flex-col grow bg-primaryLight">
             <Helmet>
                 <title>Prize Ranking | Jury</title>
             </Helmet>
-            <JuryHeader withLogout />
+            <JuryHeader withLogout className="bg-transparent" />
             <Container noCenter className="px-2 pb-4">
                 <Back location="/judge" />
                 <h1 className="text-2xl mt-2">
@@ -161,7 +162,7 @@ const JudgePrizeRanking = () => {
                     <p className="text-light mt-4">There are no projects to rank for this prize.</p>
                 )}
             </Container>
-        </>
+        </div>
     );
 };
 
