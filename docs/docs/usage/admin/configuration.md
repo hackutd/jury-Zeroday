@@ -63,7 +63,7 @@ After a judge finishes a project and ranks it as usual, the **Next** button take
 
 On the admin dashboard, a prize dropdown appears next to the toolbar buttons. Picking a prize shows only the projects in that HackUTD track, sorted by their **Prize Score** (highest first). Prize scores use the same Copeland method as the general score, summed over every judge's ranking for that prize. Prize Rankings are separate from [track judging](/docs/usage/admin/tracks): they don't change which projects judges are sent to, and they don't affect the general score. **Clear Rankings** and **Clear Judging Data** also clear prize rankings.
 
-**Best Beginner** is hardcoded as a filter only. It is always in the prize dropdown, and picking it shows the projects whose opt-in prizes contain "Best Beginner" (eg. "Best Beginner Hack"), sorted by their **general** score. Judges never get a ranking screen for it, and it is dropped if you add it to the Prize Rankings list.
+**Best Beginner** is hardcoded as a filter only. It is always in the prize dropdown, and picking it shows the projects that answered **yes** to the Devpost **"Beginner Verification"** question (read at import, found by its header wherever it is), sorted by their **general** score. Projects imported before this, or from an export without that question, aren't marked as beginner, so re-import from Devpost. Judges never get a ranking screen for it, and it is dropped if you add it to the Prize Rankings list.
 
 ### Export Data
 

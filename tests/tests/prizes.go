@@ -50,13 +50,13 @@ func getPrizeScores(context *util.Context) (map[string]map[string]int64, util.Re
 // devpostTrackCSV is a small Devpost export with HackUTD's "What Hack Utd Track" custom question.
 // "Prize None" has Best Design in its Opt-In Prizes but no track, and must not be ranked for it.
 // "Prize Opted Out" answered "None" (no HackUTD track), which is never listed or ranked.
-const devpostTrackCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General)
-Prize Design,https://devpost.com/1,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Design
-Prize Design 2,https://devpost.com/2,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,best design
-Prize AI,https://devpost.com/3,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best AI
-Prize None,https://devpost.com/4,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,Best Design,go,
-Prize Hardware,https://devpost.com/5,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Hardware
-Prize Opted Out,https://devpost.com/6,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,None`
+const devpostTrackCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General),Beginner Verification
+Prize Design,https://devpost.com/1,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Design,yes
+Prize Design 2,https://devpost.com/2,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,best design,no
+Prize AI,https://devpost.com/3,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best AI,YES
+Prize None,https://devpost.com/4,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,Best Design,go,,
+Prize Hardware,https://devpost.com/5,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Hardware,
+Prize Opted Out,https://devpost.com/6,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,None,no`
 
 // PrizeRankingsEndToEnd verifies that every judge can rank the projects they saw for each prize in
 // the settings (only the projects whose HackUTD track is that prize, not Opt-In Prizes), that bad
@@ -109,6 +109,24 @@ func PrizeRankingsEndToEnd(context *util.Context) util.Result {
 	}
 	if status, _ := util.GetRequestWithStatus(context.Logger, "/admin/hackutd-tracks", util.DefaultAuth()); status == 200 {
 		return util.NewResult(false, "HackUTD tracks must require admin auth")
+	}
+
+	// Projects that answered "yes" (any case) to Beginner Verification are marked as beginners
+	var listed []struct {
+		Id       string `json:"id"`
+		Beginner bool   `json:"beginner"`
+	}
+	if err := json.Unmarshal([]byte(util.GetRequest(context.Logger, "/project/list", util.AdminAuth())), &listed); err != nil {
+		return util.NewResult(false, "Could not parse project list: "+err.Error())
+	}
+	beginners := []string{}
+	for _, p := range listed {
+		if p.Beginner {
+			beginners = append(beginners, p.Id)
+		}
+	}
+	if !sameIDs(beginners, design, ai) {
+		return util.NewResult(false, fmt.Sprintf("Beginners should be Prize Design and Prize AI (answered yes), got %v", beginners))
 	}
 
 	token, res := createNamedJudge(context, "prize_judge@example.com", "Prize Judge")

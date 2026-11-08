@@ -41,6 +41,8 @@ Once you have the CSV downloaded, go back into Jury and upload the CSV. It shoul
 
 If the export has HackUTD's custom question **"What Hack Utd Track Would You Like To Apply To?"**, each project's answer is saved as its HackUTD track and used for [Prize Rankings](/docs/usage/admin/configuration#prize-rankings). The column is found by its header, wherever it is; exports without it import as usual.
 
+Similarly, if the export has the **"Beginner Verification"** question, projects that answered **yes** are marked as beginner projects, which the admin **Best Beginner** filter shows.
+
 :::tip
 Devpost includes projects that are still drafts (haven't been submitted), but Jury automatically ignores them when importing the CSV.
 :::
