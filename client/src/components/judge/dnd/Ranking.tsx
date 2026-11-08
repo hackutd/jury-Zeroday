@@ -14,7 +14,7 @@ import Droppable from './Droppable';
 import RankItem from './RankItem';
 import CustomPointerSensor from './CustomPointerSensor';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { postRequest } from '../../../api';
 import { errorAlert } from '../../../util';
 
@@ -46,6 +46,10 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
     const [ranked, setRanked] = useState<SortableJudgedProject[]>([]);
     const [unranked, setUnranked] = useState<SortableJudgedProject[]>([]);
     const [loaded, setLoaded] = useState(false);
+    // Whether the project being dragged started in the ranked list. Ranked projects can only be
+    // reordered, never moved back to unranked (an unranked project can still change its mind
+    // mid-drag, until it's dropped into the ranked list).
+    const dragFromRanked = useRef(false);
 
     // Load all projects when judge loads
     useEffect(() => {
@@ -78,6 +82,7 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event;
+        dragFromRanked.current = isRankedObject(active.id);
         setActiveId(active.id as number);
     };
 
@@ -93,6 +98,12 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
 
         const activeRanked = isRankedObject(id);
         const overRanked = isRankedObject(overId);
+
+        // A ranked project can't be moved back to unranked
+        if (dragFromRanked.current && !overRanked) {
+            setActiveDropzone('ranked');
+            return;
+        }
 
         setActiveDropzone(overRanked ? 'ranked' : 'unranked');
 
@@ -127,6 +138,15 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
 
         const activeRanked = isRankedObject(id);
         const overRanked = isRankedObject(overId);
+
+        // A ranked project dropped over the unranked list stays where it was
+        if (dragFromRanked.current && !overRanked) {
+            dragFromRanked.current = false;
+            setActiveDropzone(null);
+            setActiveId(null);
+            return;
+        }
+        dragFromRanked.current = false;
 
         if (activeRanked === overRanked) {
             const currProjs = activeRanked ? ranked : unranked;
@@ -206,8 +226,8 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
             </h2>
             <p className="text-light text-sm">
                 {prize
-                    ? 'Drag projects here and order them best first. Click on titles to see details.'
-                    : "Your general ranking of every project you've seen. Rank as many projects as you can. Click on titles to edit scores and see details."}
+                    ? 'Drag projects here and order them best first. Ranked projects can be reordered but not moved back. Click on titles to see details.'
+                    : "Your general ranking of every project you've seen. Ranked projects can be reordered but not moved back. Click on titles to edit scores and see details."}
             </p>
             <div className="h-[1px] w-full bg-light my-2"></div>
             <Droppable
