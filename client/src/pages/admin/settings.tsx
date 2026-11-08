@@ -73,6 +73,13 @@ const EXPORT_LEGEND: { name: string; file: string; contents: string; share: bool
         share: false,
     },
     {
+        name: 'Export for Virality',
+        file: 'ZIP',
+        contents:
+            'Projects that applied to the Virality HackUTD track, sorted by table. virality.pdf lists table and name; virality.csv adds links and team member names and emails.',
+        share: false,
+    },
+    {
         name: 'Export Rankings',
         file: 'CSV',
         contents:
@@ -642,6 +649,23 @@ const AdminSettings = () => {
         saveToFile((await res.blob()) as Blob, 'nvidia-export', 'zip');
     };
 
+    const exportVirality = async () => {
+        const url = `${import.meta.env.VITE_JURY_URL}/admin/export/virality`;
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: createHeaders('admin', false),
+        });
+
+        if (res.status !== 200) {
+            const error = 'Error exporting data: ' + res.statusText;
+            alert(error);
+            console.error(error);
+            return;
+        }
+
+        saveToFile((await res.blob()) as Blob, 'virality-export', 'zip');
+    };
+
     const saveToFile = (blob: Blob, name: string, ext: string) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1116,6 +1140,9 @@ const AdminSettings = () => {
                         </SettingsButton>
                         <SettingsButton onClick={exportNvidia} className="my-0 lg:my-2">
                             Export for Nvidia
+                        </SettingsButton>
+                        <SettingsButton onClick={exportVirality} className="my-0 lg:my-2">
+                            Export for Virality
                         </SettingsButton>
                     </div>
 
