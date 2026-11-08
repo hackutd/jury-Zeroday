@@ -15,6 +15,9 @@ interface JuryHeaderProps {
 
     /* Custom back location */
     backLocation?: string;
+
+    /* Tailwind classes, will override defaults */
+    className?: string;
 }
 
 const JuryHeader = (props: JuryHeaderProps) => {
@@ -35,7 +38,8 @@ const JuryHeader = (props: JuryHeaderProps) => {
         <div
             className={twMerge(
                 'px-2 relative mx-auto pt-2 md:pt-6 w-full flex flex-col bg-background',
-                props.isAdmin ? 'lg:items-center md:pt-2 lg:pt-6' : 'md:w-[30rem]'
+                props.isAdmin ? 'lg:items-center md:pt-2 lg:pt-6' : 'md:w-[30rem]',
+                props.className
             )}
         >
             <a

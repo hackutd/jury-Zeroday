@@ -4,8 +4,8 @@ import (
 	"context"
 	"server/database"
 	"server/models"
-	"server/util"
 	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -57,13 +57,14 @@ func copelandScores(ranking []primitive.ObjectID, candidates []primitive.ObjectI
 	return out
 }
 
-// PrizeProjectIds returns the IDs of the projects the judge has seen that opted into the prize
-// (ignoring case), in the order they were seen. Seen projects that no longer exist are left out.
+// PrizeProjectIds returns the IDs of the projects the judge has seen whose HackUTD track (the Devpost
+// "What Hack Utd Track" answer, not the Opt-In Prizes) is the prize, ignoring case, in the order they
+// were seen. Seen projects that no longer exist are left out.
 func PrizeProjectIds(judge *models.Judge, prize string, projects map[primitive.ObjectID]*models.Project) []primitive.ObjectID {
 	out := make([]primitive.ObjectID, 0)
 	for _, seen := range judge.SeenProjects {
 		project, ok := projects[seen.ProjectId]
-		if ok && util.ContainsFold(project.ChallengeList, prize) {
+		if ok && strings.EqualFold(strings.TrimSpace(project.HackUTDTrack), prize) {
 			out = append(out, seen.ProjectId)
 		}
 	}
@@ -72,9 +73,10 @@ func PrizeProjectIds(judge *models.Judge, prize string, projects map[primitive.O
 
 // AggregatePrizeScores calculates every project's score for each prize in options.PrizeRankings,
 // keyed by project ID and then prize name. Every judge counts, general and track judges alike.
-//  1. For each judge and prize, the candidates are the seen projects that opted into the prize
+//  1. For each judge and prize, the candidates are the seen projects in that HackUTD track
+//     (see PrizeProjectIds)
 //  2. The judge's prize ranking is filtered to those candidates (drops deleted projects and
-//     projects that are no longer opted in), then scored with the Copeland method
+//     projects no longer in the track), then scored with the Copeland method
 //  3. Scores are summed over all judges
 func AggregatePrizeScores(judges []*models.Judge, projects []*models.Project, prizes []string) map[primitive.ObjectID]map[string]int64 {
 	byId := make(map[primitive.ObjectID]*models.Project, len(projects))

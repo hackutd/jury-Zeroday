@@ -671,6 +671,23 @@ func GetChallenges(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, challenges)
 }
 
+// GET /admin/hackutd-tracks - GetHackUTDTracks returns every HackUTD track answer from the Devpost
+// import, exactly as typed, so admins can copy them into Prize Rankings
+func GetHackUTDTracks(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get the tracks from the database
+	tracks, err := database.GetHackUTDTracks(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting hackutd tracks from database: " + err.Error()})
+		return
+	}
+
+	// Send OK
+	ctx.JSON(http.StatusOK, tracks)
+}
+
 // PUT /project/move/group/:id - Move a project to a different group
 func MoveProjectGroup(ctx *gin.Context) {
 	// Get the state from the context

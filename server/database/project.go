@@ -5,6 +5,8 @@ import (
 	"errors"
 	"server/models"
 	"server/util"
+	"sort"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -304,6 +306,31 @@ func GetChallenges(db *mongo.Database, ctx context.Context) ([]string, error) {
 	}
 
 	return challengeList, nil
+}
+
+// GetHackUTDTracks gets every distinct HackUTD track answer (the Devpost "What Hack Utd Track"
+// question) from the projects, exactly as typed in Devpost, sorted, without blanks or "None"
+// (no track, see models.IsNoHackUTDTrack)
+func GetHackUTDTracks(db *mongo.Database, ctx context.Context) ([]string, error) {
+	// Get all projects
+	projects, err := FindAllProjects(db, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect the distinct, non-empty tracks
+	seen := make(map[string]bool)
+	tracks := make([]string, 0)
+	for _, project := range projects {
+		track := strings.TrimSpace(project.HackUTDTrack)
+		if track != "" && !models.IsNoHackUTDTrack(track) && !seen[track] {
+			seen[track] = true
+			tracks = append(tracks, track)
+		}
+	}
+	sort.Strings(tracks)
+
+	return tracks, nil
 }
 
 // UpdateProjectStars updates the starred count of a project, incrementing or decrementing it

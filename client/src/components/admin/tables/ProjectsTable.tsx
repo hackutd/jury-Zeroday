@@ -98,15 +98,16 @@ const ProjectsTable = () => {
                   )
                 : unsortedProjects;
 
-        // Then filter to the projects that opted into the selected prize
+        // Then filter to the selected prize: ranked prizes match the project's HackUTD track (Devpost
+        // "What Hack Utd Track" answer); Best Beginner shows the projects that answered "yes" to the
+        // Devpost "Beginner Verification" question
         const prizeFilteredProjects =
             selectedPrize !== ''
                 ? filteredProjects.filter((project) =>
-                      project.challenge_list.some((c) =>
-                          isFilterOnlyPrize(selectedPrize)
-                              ? isFilterOnlyPrize(c)
-                              : c.toLowerCase() === selectedPrize.toLowerCase()
-                      )
+                      isFilterOnlyPrize(selectedPrize)
+                          ? project.beginner
+                          : (project.hackutd_track ?? '').trim().toLowerCase() ===
+                            selectedPrize.toLowerCase()
                   )
                 : filteredProjects;
 

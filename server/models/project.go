@@ -26,6 +26,12 @@ type Project struct {
 	Prioritized   bool               `bson:"prioritized" json:"prioritized"`
 	Group         int64              `bson:"group" json:"group"`
 	LastActivity  primitive.DateTime `bson:"last_activity" json:"last_activity"`
+	// Answer to the Devpost question "What Hack Utd Track Would You Like To Apply To?" (one dropdown
+	// value, exactly as typed in Devpost, "" if not answered). Prize Rankings match against this.
+	HackUTDTrack string `bson:"hackutd_track" json:"hackutd_track"`
+	// True if the team answered "yes" to the Devpost "Beginner Verification" question. The admin
+	// Best Beginner filter shows these projects. False in old documents and non-Devpost imports.
+	Beginner bool `bson:"beginner" json:"beginner"`
 	// Team members from the Devpost PII export. Not sent in JSON (judge/admin responses),
 	// only used by the participants export
 	TeamMembers []TeamMember `bson:"team_members" json:"-"`
@@ -58,6 +64,8 @@ func NewProject(name string, location int64, group int64, description string, ur
 		Prioritized:   false,
 		LastActivity:  primitive.DateTime(0),
 		TeamMembers:   []TeamMember{},
+		HackUTDTrack:  "",
+		Beginner:      false,
 	}
 }
 

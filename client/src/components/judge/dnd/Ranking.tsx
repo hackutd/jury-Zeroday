@@ -14,7 +14,7 @@ import Droppable from './Droppable';
 import RankItem from './RankItem';
 import CustomPointerSensor from './CustomPointerSensor';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { postRequest } from '../../../api';
 import { errorAlert } from '../../../util';
 
@@ -22,7 +22,7 @@ interface RankingProps {
     judge: Judge | null;
     deliberation: boolean;
 
-    /* If set, rank only the seen projects that opted into this prize, saved as the prize ranking */
+    /* If set, rank only the seen projects in this prize's HackUTD track, saved as the prize ranking */
     prize?: JudgePrize;
 
     /* Called with the saved ranking (project IDs, best first) after each successful save */
@@ -46,6 +46,10 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
     const [ranked, setRanked] = useState<SortableJudgedProject[]>([]);
     const [unranked, setUnranked] = useState<SortableJudgedProject[]>([]);
     const [loaded, setLoaded] = useState(false);
+    // Whether the project being dragged started in the ranked list. Ranked projects can only be
+    // reordered, never moved back to unranked (an unranked project can still change its mind
+    // mid-drag, until it's dropped into the ranked list).
+    const dragFromRanked = useRef(false);
 
     // Load all projects when judge loads
     useEffect(() => {
@@ -78,6 +82,7 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event;
+        dragFromRanked.current = isRankedObject(active.id);
         setActiveId(active.id as number);
     };
 
@@ -93,6 +98,12 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
 
         const activeRanked = isRankedObject(id);
         const overRanked = isRankedObject(overId);
+
+        // A ranked project can't be moved back to unranked
+        if (dragFromRanked.current && !overRanked) {
+            setActiveDropzone('ranked');
+            return;
+        }
 
         setActiveDropzone(overRanked ? 'ranked' : 'unranked');
 
@@ -127,6 +138,15 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
 
         const activeRanked = isRankedObject(id);
         const overRanked = isRankedObject(overId);
+
+        // A ranked project dropped over the unranked list stays where it was
+        if (dragFromRanked.current && !overRanked) {
+            dragFromRanked.current = false;
+            setActiveDropzone(null);
+            setActiveId(null);
+            return;
+        }
+        dragFromRanked.current = false;
 
         if (activeRanked === overRanked) {
             const currProjs = activeRanked ? ranked : unranked;
@@ -201,11 +221,13 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
                     Deliberation has started. You cannot change rankings.
                 </p>
             )}
-            <h2 className="text-primary text-xl font-bold mt-4">
-                {prize ? `Ranked Projects for ${prize.prize}` : 'Ranked Projects'}
+            <h2 className={`${prize ? 'text-prize' : 'text-primary'} text-xl font-bold mt-4`}>
+                {prize ? `Ranked Projects for ${prize.prize}` : 'General Ranking'}
             </h2>
             <p className="text-light text-sm">
-                Rank as many projects as you can. Click on titles to edit scores and see details.
+                {prize
+                    ? 'Drag projects here and order them best first. Ranked projects can be reordered but not moved back. Click on titles to see details.'
+                    : "Your general ranking of every project you've seen. Ranked projects can be reordered but not moved back. Click on titles to edit scores and see details."}
             </p>
             <div className="h-[1px] w-full bg-light my-2"></div>
             <Droppable
@@ -215,7 +237,9 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
                 disabled={disabled || deliberation}
             />
 
-            <h2 className="text-primary text-xl font-bold mt-4">Unranked Projects</h2>
+            <h2 className={`${prize ? 'text-prize' : 'text-primary'} text-xl font-bold mt-4`}>
+                {prize ? `Unranked Projects for ${prize.prize}` : 'Unranked Projects'}
+            </h2>
             <p className="text-light text-sm">
                 Projects will be sorted in reverse chronological order.
             </p>

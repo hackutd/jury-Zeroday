@@ -9,7 +9,7 @@ import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
-import { pendingPrizes, prizeQueueUrl } from './prize';
+import { lastJudgedProject, pendingPrizes, prizeQueueUrl } from './prize';
 
 const Judge = () => {
     const navigate = useNavigate();
@@ -18,6 +18,11 @@ const Judge = () => {
     const [loaded, setLoaded] = useState(false);
     const [projCount, setProjCount] = useState(0);
     const [deliberation, setDeliberation] = useState(false);
+    // The judge's saved general ranking, kept in sync as they drag (see Ranking onSave)
+    const [ranking, setRanking] = useState<string[]>([]);
+    // Show the general ranking for this visit if the project they just finished wasn't ranked yet
+    // when the page loaded. It stays up after they drag it in, so they can still adjust its spot.
+    const [showRanking, setShowRanking] = useState(false);
 
     // Verify user is logged in and read welcome before proceeding
     useEffect(() => {
@@ -73,7 +78,14 @@ const Judge = () => {
                 errorAlert(delibRes);
                 return;
             }
-            setDeliberation(delibRes.data?.ok === 1);
+            const isDeliberation = delibRes.data?.ok === 1;
+            setDeliberation(isDeliberation);
+
+            // Seed the general ranking from the saved one, and decide whether to show it
+            const savedRanking = judge.rankings ?? [];
+            const last = lastJudgedProject(judge);
+            setRanking(savedRanking);
+            setShowRanking(!isDeliberation && last !== null && !savedRanking.includes(last));
 
             // Get the prizes the judge can rank for
             const prizesRes = await getRequest<JudgePrize[]>('/judge/prizes', 'judge');
@@ -91,9 +103,20 @@ const Judge = () => {
 
     if (!loaded || !judge) return <Loading disabled={!loaded || !judge} />;
 
-    // After finishing a project, remind the judge to rank it for each prize it opted into. This comes
-    // from the saved rankings, so a refresh or the Back link keeps the reminder. They can still skip.
-    const prizeQueue = pendingPrizes(judge, prizes);
+    // After finishing a project, the judge must rank it for its HackUTD track (if Prize Rankings is on
+    // for that track) before getting another project: Next Project is replaced by the prize ranking
+    // button, and the reminder is shown on the prize screen. This comes from the saved rankings, so a
+    // refresh or the Back link keeps it. Not during deliberation, when rankings are frozen.
+    const prizeQueue = deliberation ? [] : pendingPrizes(judge, prizes);
+
+    // The judge must rank the project they just finished in their general ranking first, then for its
+    // prize (if any), before getting another project. Not during deliberation, when rankings are frozen.
+    const last = lastJudgedProject(judge);
+    const notRanked = !deliberation && last !== null && !ranking.includes(last);
+    const lastSeen = judge.seen_projects.find((p) => p.project_id === last);
+    const lastName = lastSeen
+        ? `Table ${lastSeen.location}: ${lastSeen.name}`
+        : 'your last project';
 
     return (
         <>
@@ -106,54 +129,33 @@ const Judge = () => {
                 {judge.track !== '' && (
                     <p className="text-lighter font-bold">Track: {judge.track}</p>
                 )}
+                {notRanked && (
+                    <p className="p-2 text-center mt-4 border-gold border-2 bg-gold/20 rounded-md">
+                        Drag <b>{lastName}</b> into General Ranking to continue.
+                    </p>
+                )}
                 <div className="w-full mb-6 mt-2">
                     {prizeQueue.length > 0 ? (
                         <Button
-                            type="primary"
+                            type="error"
                             full
                             onClick={() => navigate(prizeQueueUrl(prizeQueue))}
+                            disabled={notRanked}
                         >
                             Next: Rank for {prizeQueue[0]}
                         </Button>
                     ) : (
-                        <Button type="primary" full href="/judge/live">
+                        <Button type="primary" full href="/judge/live" disabled={notRanked}>
                             {judge.current !== null ? 'Resume Project' : 'Next Project'}
                         </Button>
-                    )}
-                    {prizeQueue.length > 0 && (
-                        <>
-                            <p className="text-goldDark text-sm text-center mt-2">
-                                Reminder: rank your last project for {prizeQueue.join(', ')}.
-                            </p>
-                            <Button type="outline" full href="/judge/live" className="mt-2">
-                                Skip to Next Project
-                            </Button>
-                        </>
                     )}
                 </div>
                 <div className="flex justify-evenly">
                     <StatBlock name="Seen" value={judge.seen_projects.length + judge.flagged.length} />
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
-                <Ranking judge={judge} deliberation={deliberation} />
-                {prizes.length > 0 && (
-                    <>
-                        <h2 className="text-primary text-xl font-bold mt-6">Prize Rankings</h2>
-                        <p className="text-light text-sm">Edit your ranking for a prize.</p>
-                        <div className="h-[1px] w-full bg-light my-2"></div>
-                        <div className="flex flex-wrap gap-2">
-                            {prizes.map((p) => (
-                                <Button
-                                    key={p.prize}
-                                    type="outline-primary"
-                                    className="text-lg"
-                                    onClick={() => navigate(prizeQueueUrl([p.prize]))}
-                                >
-                                    {p.prize} ({p.project_ids.length})
-                                </Button>
-                            ))}
-                        </div>
-                    </>
+                {(showRanking || notRanked) && (
+                    <Ranking judge={judge} deliberation={deliberation} onSave={setRanking} />
                 )}
             </Container>
         </>

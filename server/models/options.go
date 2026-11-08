@@ -76,12 +76,22 @@ func IsFilterOnlyPrize(prize string) bool {
 	return strings.Contains(strings.ToLower(prize), strings.ToLower(BestBeginnerPrize))
 }
 
+// NoHackUTDTrack is the Devpost answer for teams that don't apply to a HackUTD track (they are
+// still judged for General). It is never a prize: it isn't listed or rankable.
+const NoHackUTDTrack = "None"
+
+// IsNoHackUTDTrack returns true if the HackUTD track answer is "None" (ignoring case and spaces)
+func IsNoHackUTDTrack(track string) bool {
+	return strings.EqualFold(strings.TrimSpace(track), NoHackUTDTrack)
+}
+
 // RankedPrizes returns the prizes from PrizeRankings that judges rank for, leaving out the
-// filter-only prizes (see IsFilterOnlyPrize), even if they were saved in the settings
+// filter-only prizes (see IsFilterOnlyPrize) and "None" (see IsNoHackUTDTrack), even if they were
+// saved in the settings
 func (o *Options) RankedPrizes() []string {
 	prizes := make([]string, 0, len(o.PrizeRankings))
 	for _, prize := range o.PrizeRankings {
-		if !IsFilterOnlyPrize(prize) {
+		if !IsFilterOnlyPrize(prize) && !IsNoHackUTDTrack(prize) {
 			prizes = append(prizes, prize)
 		}
 	}

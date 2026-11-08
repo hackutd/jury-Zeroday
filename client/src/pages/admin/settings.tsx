@@ -923,22 +923,28 @@ const AdminSettings = () => {
 
                     <SubSection>Set Prize Rankings</SubSection>
                     <Description>
-                        Set the opt-in prizes that every judge also ranks for. After a judge
-                        finishes a project and ranks it, they get one extra ranking screen for each
-                        prize listed here that the project opted into. Names must match the
-                        &apos;Opt-In Prizes&apos; from Devpost (case does not matter). Prizes not
-                        listed here are not ranked. On the admin dashboard, pick a prize to only
-                        show its projects, sorted by their prize score. This is separate from track
-                        judging and does not change which projects judges are sent to. Best Beginner
-                        is always a dashboard filter (sorted by general score) and is never ranked
-                        by judges, even if it is listed here.
+                        Set the HackUTD tracks that every judge also ranks for. After a judge
+                        finishes a project and ranks it, they get one extra ranking screen if the
+                        project&apos;s answer to &apos;What Hack Utd Track Would You Like To Apply
+                        To?&apos; on Devpost is listed here. Names must match those answers, shown
+                        below exactly as typed in Devpost (case does not matter). Opt-In Prizes are
+                        not used here. Tracks not listed here are not ranked. On the admin
+                        dashboard, pick a prize to only show its projects, sorted by their prize
+                        score. This is separate from track judging and does not change which
+                        projects judges are sent to. Best Beginner is always a dashboard filter
+                        (sorted by general score) and is never ranked by judges, even if it is
+                        listed here.
                     </Description>
-                    <ChallengeBlock />
+                    <ChallengeBlock
+                        title="HackUTD Tracks (from Devpost)"
+                        path="/admin/hackutd-tracks"
+                        auth="admin"
+                    />
                     <TextInput
                         text={prizeRankings}
                         setText={setPrizeRankings}
                         label="List of Prizes"
-                        placeholder="Best Design, Best Use of AI, ..."
+                        placeholder="Best Design, Best Hardware, Virality"
                         large
                         full
                         className="my-2"

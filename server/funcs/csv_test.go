@@ -232,3 +232,42 @@ func TestCreateDiscordCSV(t *testing.T) {
 		}
 	}
 }
+
+func TestSkipDevpostStatus(t *testing.T) {
+	for status, want := range map[string]bool{
+		"Draft":                       true,
+		"Submitted (Hidden)":          true,
+		" submitted (hidden) ":        true,
+		"Submitted (Gallery/Visible)": false,
+		"Submitted":                   false,
+	} {
+		if got := skipDevpostStatus(status); got != want {
+			t.Errorf("skipDevpostStatus(%q) = %v, want %v", status, got, want)
+		}
+	}
+}
+
+func TestDevpostBeginnerColumn(t *testing.T) {
+	header := []string{"Project Title", "Track Submission Limit", " Beginner Verification ", "What Hack Utd Track Would You Like To Apply To?"}
+	if got := findDevpostBeginnerColumn(header); got != 2 {
+		t.Fatalf("expected Beginner Verification at column 2, got %d", got)
+	}
+	if got := findDevpostBeginnerColumn([]string{"Project Title"}); got != -1 {
+		t.Fatalf("expected -1 when the export has no Beginner Verification, got %d", got)
+	}
+	for answer, want := range map[string]bool{"yes": true, " Yes ": true, "YES": true, "no": false, "": false, "nah": false} {
+		if got := isDevpostBeginner(answer); got != want {
+			t.Errorf("isDevpostBeginner(%q) = %v, want %v", answer, got, want)
+		}
+	}
+}
+
+func TestFindDevpostHackUTDTrackColumn(t *testing.T) {
+	header := []string{"Project Title", "Opt-In Prizes", "Notes", "\xef\xbb\xbf What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General) ", "Team Member 1 Email"}
+	if got := findDevpostHackUTDTrackColumn(header); got != 3 {
+		t.Fatalf("expected the track question at column 3, got %d", got)
+	}
+	if got := findDevpostHackUTDTrackColumn([]string{"Project Title", "Opt-In Prizes"}); got != -1 {
+		t.Fatalf("expected -1 when the export has no track question, got %d", got)
+	}
+}

@@ -102,12 +102,14 @@ func ExportByChallengesZip(context *util.Context) util.Result {
 	return util.ResultOk()
 }
 
-// devpostPIICSV is a small Devpost PII export: one team of three, one solo submitter, and a draft
-// (custom question columns shortened). Like the real export, only Team Member 1's columns are named,
+// devpostPIICSV is a small Devpost PII export: one team of three, one solo submitter, a project hidden
+// on Devpost and a draft (custom question columns shortened). The hidden project and the draft are
+// never imported, so the exact-row checks below also verify they're skipped. Like the real export, only Team Member 1's columns are named,
 // followed by a "..." column where the team's second member's unlabeled cells start
 const devpostPIICSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,Notes,Some Custom Question,Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email,...
 Team Project,https://devpost.com/1-team,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,Design,go,Ann ,Lee,ann@example.com,,,2,Bob,Kim,bob@example.com,carlusername,,carl@example.com
-Solo Project,https://devpost.com/2-solo,Submitted (Hidden),Pending,Submit,,,,About,,,,,,go,Dee,Ray,dee@example.com,,,0
+Solo Project,https://devpost.com/2-solo,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Dee,Ray,dee@example.com,,,0
+Hidden Project,https://devpost.com/3-hidden,Submitted (Hidden),Pending,Submit,,,,About,,,,,Design,go,Hal,Hid,hal@example.com,,,0
 Untitled,,Draft,Pending,Manage team,,,,,,,,,,,Eve,Fox,eve@example.com,,,0`
 
 // ExportParticipantsCSV verifies that importing the Devpost PII export stores team members, that

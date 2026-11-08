@@ -859,8 +859,8 @@ func JudgeRank(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"ok": 1})
 }
 
-// JudgePrize is one opt-in prize the judge can rank for: the projects they've seen that opted
-// into it (in the order seen) and their current ranking of those projects
+// JudgePrize is one prize (HackUTD track) the judge can rank for: the projects they've seen in that
+// track (in the order seen) and their current ranking of those projects
 type JudgePrize struct {
 	Prize      string               `json:"prize"`
 	ProjectIds []primitive.ObjectID `json:"project_ids"`
@@ -881,7 +881,7 @@ func prizeProjectsById(db *mongo.Database, ctx context.Context) (map[primitive.O
 }
 
 // GET /judge/prizes - JudgePrizes lists the ranked prizes (options.RankedPrizes) that at least one of
-// the judge's seen projects opted into, in settings order, with the judge's ranking for each
+// the judge's seen projects is in (by HackUTD track), in settings order, with the judge's ranking for each
 func JudgePrizes(ctx *gin.Context) {
 	// Get the state from the context
 	state := GetState(ctx)
@@ -927,8 +927,8 @@ type PrizeRankRequest struct {
 	Ranking []primitive.ObjectID `json:"ranking"`
 }
 
-// POST /judge/rank/prize - JudgeRankPrize updates the judge's ranking for one opt-in prize. Every
-// ranked project must be one the judge has seen that opted into the prize.
+// POST /judge/rank/prize - JudgeRankPrize updates the judge's ranking for one prize. Every ranked
+// project must be one the judge has seen whose HackUTD track is the prize.
 func JudgeRankPrize(ctx *gin.Context) {
 	// Get the state from the context
 	state := GetState(ctx)
@@ -966,7 +966,7 @@ func JudgeRankPrize(ctx *gin.Context) {
 			return errors.New("invalid prize")
 		}
 
-		// Make sure every ranked project was seen by the judge and opted into the prize
+		// Make sure every ranked project was seen by the judge and is in the prize's HackUTD track
 		projects, err := prizeProjectsById(state.Db, sc)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
