@@ -141,8 +141,7 @@ const JudgePrizeRanking = () => {
                 </p>
                 {notRanked && (
                     <p className="p-2 text-center mt-4 border-gold border-2 bg-gold/20 rounded-md">
-                        Reminder: drag <b>{lastName}</b> into Ranked Projects for {prizeTitle} to
-                        continue.
+                        Drag <b>{lastName}</b> into Ranked Projects for {prizeTitle} to continue.
                     </p>
                 )}
                 <div className="w-full mb-2 mt-4">

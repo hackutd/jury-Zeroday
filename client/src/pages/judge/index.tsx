@@ -11,6 +11,9 @@ import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
 import { pendingPrizes, prizeQueueUrl } from './prize';
 
+export const lastJudgedProject = (judge: Judge) =>
+    judge.seen_projects[judge.seen_projects.length - 1]?.project_id ?? null;
+
 const Judge = () => {
     const navigate = useNavigate();
     const [prizes, setPrizes] = useState<JudgePrize[]>([]);
@@ -18,6 +21,7 @@ const Judge = () => {
     const [loaded, setLoaded] = useState(false);
     const [projCount, setProjCount] = useState(0);
     const [deliberation, setDeliberation] = useState(false);
+    const [ranking, setRanking] = useState<string[]>([]);
 
     // Verify user is logged in and read welcome before proceeding
     useEffect(() => {
@@ -97,6 +101,17 @@ const Judge = () => {
     // refresh or the Back link keeps it. Not during deliberation, when rankings are frozen.
     const prizeQueue = deliberation ? [] : pendingPrizes(judge, prizes);
 
+    // Determine not ranked banner
+    const last = lastJudgedProject(judge);
+    const notRanked =
+        !deliberation &&
+        last !== null &&
+        !ranking.includes(last);
+    const lastSeen = judge.seen_projects.find((p) => p.project_id === last);
+    const lastName = lastSeen
+        ? `Table ${lastSeen.location}: ${lastSeen.name}`
+        : 'your last project';
+
     return (
         <>
             <Helmet>
@@ -108,17 +123,23 @@ const Judge = () => {
                 {judge.track !== '' && (
                     <p className="text-lighter font-bold">Track: {judge.track}</p>
                 )}
+                {notRanked && (
+                    <p className="p-2 text-center mt-4 border-gold border-2 bg-gold/20 rounded-md">
+                        Drag <b>{lastName}</b> into Ranked Projects to continue.
+                    </p>
+                )}
                 <div className="w-full mb-6 mt-2">
                     {prizeQueue.length > 0 ? (
                         <Button
                             type="error"
                             full
                             onClick={() => navigate(prizeQueueUrl(prizeQueue))}
+                            disabled={notRanked}
                         >
                             Next: Rank for {prizeQueue[0]}
                         </Button>
                     ) : (
-                        <Button type="primary" full href="/judge/live">
+                        <Button type="primary" full href="/judge/live" disabled={notRanked}>
                             {judge.current !== null ? 'Resume Project' : 'Next Project'}
                         </Button>
                     )}
@@ -127,7 +148,7 @@ const Judge = () => {
                     <StatBlock name="Seen" value={judge.seen_projects.length + judge.flagged.length} />
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
-                {prizeQueue.length > 0 ? <Ranking judge={judge} deliberation={deliberation} /> : null }
+                {prizeQueue.length > 0 ? <Ranking judge={judge} deliberation={deliberation} onSave={setRanking} /> : null }
             </Container>
         </>
     );
