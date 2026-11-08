@@ -9,10 +9,7 @@ import { getRequest, postRequest } from '../../api';
 import { errorAlert } from '../../util';
 import Ranking from '../../components/judge/dnd/Ranking';
 import { Helmet } from 'react-helmet';
-import { pendingPrizes, prizeQueueUrl } from './prize';
-
-export const lastJudgedProject = (judge: Judge) =>
-    judge.seen_projects[judge.seen_projects.length - 1]?.project_id ?? null;
+import { lastJudgedProject, pendingPrizes, prizeQueueUrl } from './prize';
 
 const Judge = () => {
     const navigate = useNavigate();
@@ -21,7 +18,11 @@ const Judge = () => {
     const [loaded, setLoaded] = useState(false);
     const [projCount, setProjCount] = useState(0);
     const [deliberation, setDeliberation] = useState(false);
+    // The judge's saved general ranking, kept in sync as they drag (see Ranking onSave)
     const [ranking, setRanking] = useState<string[]>([]);
+    // Show the general ranking for this visit if the project they just finished wasn't ranked yet
+    // when the page loaded. It stays up after they drag it in, so they can still adjust its spot.
+    const [showRanking, setShowRanking] = useState(false);
 
     // Verify user is logged in and read welcome before proceeding
     useEffect(() => {
@@ -77,7 +78,14 @@ const Judge = () => {
                 errorAlert(delibRes);
                 return;
             }
-            setDeliberation(delibRes.data?.ok === 1);
+            const isDeliberation = delibRes.data?.ok === 1;
+            setDeliberation(isDeliberation);
+
+            // Seed the general ranking from the saved one, and decide whether to show it
+            const savedRanking = judge.rankings ?? [];
+            const last = lastJudgedProject(judge);
+            setRanking(savedRanking);
+            setShowRanking(!isDeliberation && last !== null && !savedRanking.includes(last));
 
             // Get the prizes the judge can rank for
             const prizesRes = await getRequest<JudgePrize[]>('/judge/prizes', 'judge');
@@ -101,12 +109,10 @@ const Judge = () => {
     // refresh or the Back link keeps it. Not during deliberation, when rankings are frozen.
     const prizeQueue = deliberation ? [] : pendingPrizes(judge, prizes);
 
-    // Determine not ranked banner
+    // The judge must rank the project they just finished in their general ranking first, then for its
+    // prize (if any), before getting another project. Not during deliberation, when rankings are frozen.
     const last = lastJudgedProject(judge);
-    const notRanked =
-        !deliberation &&
-        last !== null &&
-        !ranking.includes(last);
+    const notRanked = !deliberation && last !== null && !ranking.includes(last);
     const lastSeen = judge.seen_projects.find((p) => p.project_id === last);
     const lastName = lastSeen
         ? `Table ${lastSeen.location}: ${lastSeen.name}`
@@ -125,7 +131,7 @@ const Judge = () => {
                 )}
                 {notRanked && (
                     <p className="p-2 text-center mt-4 border-gold border-2 bg-gold/20 rounded-md">
-                        Drag <b>{lastName}</b> into Ranked Projects to continue.
+                        Drag <b>{lastName}</b> into General Ranking to continue.
                     </p>
                 )}
                 <div className="w-full mb-6 mt-2">
@@ -148,7 +154,9 @@ const Judge = () => {
                     <StatBlock name="Seen" value={judge.seen_projects.length + judge.flagged.length} />
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
-                {prizeQueue.length > 0 ? <Ranking judge={judge} deliberation={deliberation} onSave={setRanking} /> : null }
+                {(showRanking || notRanked) && (
+                    <Ranking judge={judge} deliberation={deliberation} onSave={setRanking} />
+                )}
             </Container>
         </>
     );
