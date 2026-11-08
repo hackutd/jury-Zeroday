@@ -1051,3 +1051,29 @@ func ExportNvidia(ctx *gin.Context) {
 	state.Logger.AdminLogf("Exported Nvidia PDF and CSV (with team member names and emails)")
 	funcs.AddZipFile("nvidia-export", zipData, ctx)
 }
+
+// GET /admin/export/virality - ExportVirality exports a zip with virality.pdf and virality.csv: the
+// projects that applied to the Virality HackUTD track, sorted by table. The CSV contains team member
+// names and emails (PII).
+func ExportVirality(ctx *gin.Context) {
+	// Get the state from the context
+	state := GetState(ctx)
+
+	// Get all the projects
+	projects, err := database.FindAllProjects(state.Db, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error getting projects: " + err.Error()})
+		return
+	}
+
+	// Create the zip file
+	zipData, err := funcs.CreateViralityExportZip(projects)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error creating zip file: " + err.Error()})
+		return
+	}
+
+	// Send zip file
+	state.Logger.AdminLogf("Exported Virality PDF and CSV (with team member names and emails)")
+	funcs.AddZipFile("virality-export", zipData, ctx)
+}

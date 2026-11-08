@@ -80,6 +80,7 @@ All routes are listed in `server/router/init.go` with their respective handlers.
 | [/admin/export/challenges](#get-adminexportchallenges) | GET    | admin | Exports projects by challenge as ZIP of CSVs |
 | [/admin/export/discord](#get-adminexportdiscord)       | GET    | admin | Exports projects A-Z for Discord as a CSV    |
 | [/admin/export/nvidia](#get-adminexportnvidia)         | GET    | admin | Exports Nvidia projects by sponsor count (ZIP)|
+| [/admin/export/virality](#get-adminexportvirality)     | GET    | admin | Exports Virality track projects (ZIP)        |
 | [/admin/export/prizes](#get-adminexportprizes)         | GET    | admin | Exports per-prize CSVs (PII) and PDFs as ZIP |
 | [/admin/export/rankings](#get-adminexportrankings)     | GET    | admin | Exports a list of rankings for each judge    |
 | [/judge/hide/:id](#put-judgehideid)                    | PUT    | admin | Hides a judge                                |
@@ -907,6 +908,13 @@ Exports projects by challenge as ZIP of CSVs
 ### GET /admin/export/nvidia
 
 Exports `nvidia-export.zip` with `nvidia.pdf` and `nvidia.csv`: the projects that opted into Nvidia, grouped by how many other sponsors they opted into (Nvidia only, + 1, + 2, and + 3 or more only if any) and sorted by table. The CSV columns are `Group, Table, Name, Devpost, Try It Out, Other Sponsors`, then each team member's name and email (PII).
+
+-   **Auth**: admin
+-   **Response**: ZIP Blob
+
+### GET /admin/export/virality
+
+Exports `virality-export.zip` with `virality.pdf` and `virality.csv`: the projects whose HackUTD track (the Devpost "What Hack Utd Track" question, not Opt-In Prizes) is Virality, ignoring case, sorted by table. The CSV columns are `Table, Name, Devpost, Try It Out`, then each team member's name and email (PII).
 
 -   **Auth**: admin
 -   **Response**: ZIP Blob

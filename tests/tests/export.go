@@ -412,3 +412,81 @@ func ExportNvidiaZip(context *util.Context) util.Result {
 	}
 	return util.ResultOk()
 }
+
+// devpostViralityCSV is a small Devpost PII export with the "What Hack Utd Track" question: two
+// Virality projects (one typed in lowercase), one Best Design project that opted into a "Virality"
+// prize (Opt-In Prizes don't count), one that answered None and a draft that applied to Virality
+const devpostViralityCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,Submitter First Name,Submitter Last Name,Submitter Email,What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General),Additional Team Member Count,Team Member 1 First Name,Team Member 1 Last Name,Team Member 1 Email
+Viral One,https://devpost.com/1-viral,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Ann,Lee,ann@example.com,Virality,1,Bob,Kim,bob@example.com
+Design Only,https://devpost.com/2-design,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,Virality,go,Dee,Ray,dee@example.com,Best Design,0
+Viral Two,https://devpost.com/3-viral,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Eve,Fox,eve@example.com,virality,0
+No Track,https://devpost.com/4-none,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Gus,Hale,gus@example.com,None,0
+Viral Draft,https://devpost.com/5-draft,Draft,Pending,Submit,,,,About,,,,,,go,Ivy,Jay,ivy@example.com,Virality,0`
+
+// ExportViralityZip verifies that /admin/export/virality returns virality.pdf and virality.csv with
+// only the projects whose HackUTD track is Virality, sorted by table, with emails only in the CSV,
+// and that it is admin only
+func ExportViralityZip(context *util.Context) util.Result {
+	if res := resetProjects(context); !res.Success {
+		return res
+	}
+	status, body := util.PostFileWithStatus(context.Logger, "/project/devpost", "csv", "devpost.csv", devpostViralityCSV, nil, util.AdminAuth())
+	if status != 200 || !util.IsOk(body) {
+		return util.NewResult(false, fmt.Sprintf("Devpost import failed (%d): %s", status, body))
+	}
+
+	status, body = util.GetRequestWithStatus(context.Logger, "/admin/export/virality", util.AdminAuth())
+	if status != 200 {
+		return util.NewResult(false, fmt.Sprintf("Export Virality failed (%d): %s", status, body))
+	}
+	r, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len(body)))
+	if err != nil {
+		return util.NewResult(false, "Virality export is not a valid zip: "+err.Error())
+	}
+	files := map[string]string{}
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return util.NewResult(false, "Could not open "+f.Name+": "+err.Error())
+		}
+		content, _ := io.ReadAll(rc)
+		rc.Close()
+		files[f.Name] = string(content)
+	}
+	pdf, okPdf := files["virality.pdf"]
+	csvFile, okCsv := files["virality.csv"]
+	if len(files) != 2 || !okPdf || !okCsv {
+		return util.NewResult(false, fmt.Sprintf("Virality export should have virality.pdf and virality.csv, got %d files", len(files)))
+	}
+
+	// PDF: title and Virality projects, without the others or any emails
+	if !strings.HasPrefix(pdf, "%PDF-") || !strings.Contains(pdf, "(Virality) Tj") || !strings.Contains(pdf, "(Viral One) Tj") {
+		return util.NewResult(false, "virality.pdf should be a PDF with the Virality title and project names")
+	}
+	if strings.Contains(pdf, "(Design Only)") || strings.Contains(pdf, "(No Track)") || strings.Contains(pdf, "@example.com") {
+		return util.NewResult(false, "virality.pdf should only list Virality projects and have no emails")
+	}
+
+	// CSV: the two submitted Virality projects by table, with the team member emails
+	rows, err := csv.NewReader(strings.NewReader(csvFile)).ReadAll()
+	if err != nil {
+		return util.NewResult(false, "Could not parse virality.csv: "+err.Error())
+	}
+	got := []string{}
+	for _, row := range rows[1:] {
+		got = append(got, row[1])
+	}
+	want := []string{"Viral One", "Viral Two"}
+	if !slices.Equal(got, want) {
+		return util.NewResult(false, fmt.Sprintf("virality.csv projects should be %v, got %v", want, got))
+	}
+	if !strings.Contains(csvFile, "bob@example.com") {
+		return util.NewResult(false, "virality.csv should include team member emails")
+	}
+
+	// The export is admin only
+	if status, _ := util.GetRequestWithStatus(context.Logger, "/admin/export/virality", util.DefaultAuth()); status == 200 {
+		return util.NewResult(false, "Virality export must require admin auth")
+	}
+	return util.ResultOk()
+}

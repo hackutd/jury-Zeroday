@@ -76,6 +76,7 @@ func RunTests(context *util.Context) {
 				"Export Discord CSV":                     ExportDiscordCSV,
 				"Export Prizes Zip":                      ExportPrizesZip,
 				"Export Nvidia Zip":                      ExportNvidiaZip,
+				"Export Virality Zip":                    ExportViralityZip,
 			},
 		},
 		{

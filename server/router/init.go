@@ -135,6 +135,7 @@ func NewRouter(db *mongo.Database, logger *logging.Logger) *gin.Engine {
 	adminRouter.GET("/admin/export/challenges", ExportProjectsByChallenge)
 	adminRouter.GET("/admin/export/prizes", ExportPrizes)
 	adminRouter.GET("/admin/export/nvidia", ExportNvidia)
+	adminRouter.GET("/admin/export/virality", ExportVirality)
 	adminRouter.GET("/admin/export/participants", ExportParticipants)
 	adminRouter.GET("/admin/export/discord", ExportDiscord)
 	adminRouter.GET("/admin/export/rankings", ExportRankings)
