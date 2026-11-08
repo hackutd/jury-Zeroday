@@ -127,7 +127,7 @@ const Judge = () => {
                     <StatBlock name="Seen" value={judge.seen_projects.length + judge.flagged.length} />
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
-                <Ranking judge={judge} deliberation={deliberation} />
+                {prizeQueue.length > 0 ? <Ranking judge={judge} deliberation={deliberation} /> : null }
             </Container>
         </>
     );
