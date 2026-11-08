@@ -227,6 +227,13 @@ func isDevpostBeginner(answer string) bool {
 	return strings.EqualFold(strings.TrimSpace(answer), "yes")
 }
 
+// skipDevpostStatus returns true for projects that aren't imported: drafts (never submitted) and
+// submissions hidden on Devpost ("Submitted (Hidden)"), ignoring case and spaces
+func skipDevpostStatus(status string) bool {
+	status = strings.ToLower(strings.TrimSpace(status))
+	return status == "draft" || strings.Contains(status, "hidden")
+}
+
 // parseDevpostChallenges splits the Opt-In Prizes cell into a list, trimming entries and dropping empty ones
 func parseDevpostChallenges(cell string) []string {
 	challengeList := []string{}
@@ -335,7 +342,7 @@ func parseDevpostTeam(record []string, cols []devpostTeamCols, extraFrom int) []
 // Columns (by position, verified against the header row):
 //  0. Project Title - title
 //  1. Submission Url - url
-//  2. Project Status - Draft or Submitted (ignore drafts)
+//  2. Project Status - Draft, Submitted (Gallery/Visible) or Submitted (Hidden) (ignore drafts and hidden)
 //  3. Judging Status - ignore
 //  4. Highest Step Completed - ignore
 //  5. Project Created At - ignore
@@ -401,8 +408,8 @@ func ParseDevpostCSV(content string, db *mongo.Database) ([]*models.Project, err
 			return nil, fmt.Errorf("record does not contain %d or more elements (invalid devpost csv): '%s'", devpostColChallenges+1, record[devpostColTitle])
 		}
 
-		// If the project is a Draft, skip it
-		if record[devpostColStatus] == "Draft" {
+		// Skip drafts and projects hidden on Devpost
+		if skipDevpostStatus(record[devpostColStatus]) {
 			continue
 		}
 

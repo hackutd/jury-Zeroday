@@ -233,6 +233,20 @@ func TestCreateDiscordCSV(t *testing.T) {
 	}
 }
 
+func TestSkipDevpostStatus(t *testing.T) {
+	for status, want := range map[string]bool{
+		"Draft":                       true,
+		"Submitted (Hidden)":          true,
+		" submitted (hidden) ":        true,
+		"Submitted (Gallery/Visible)": false,
+		"Submitted":                   false,
+	} {
+		if got := skipDevpostStatus(status); got != want {
+			t.Errorf("skipDevpostStatus(%q) = %v, want %v", status, got, want)
+		}
+	}
+}
+
 func TestDevpostBeginnerColumn(t *testing.T) {
 	header := []string{"Project Title", "Track Submission Limit", " Beginner Verification ", "What Hack Utd Track Would You Like To Apply To?"}
 	if got := findDevpostBeginnerColumn(header); got != 2 {

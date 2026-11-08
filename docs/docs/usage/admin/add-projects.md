@@ -44,5 +44,5 @@ If the export has HackUTD's custom question **"What Hack Utd Track Would You Lik
 Similarly, if the export has the **"Beginner Verification"** question, projects that answered **yes** are marked as beginner projects, which the admin **Best Beginner** filter shows.
 
 :::tip
-Devpost includes projects that are still drafts (haven't been submitted), but Jury automatically ignores them when importing the CSV.
+Devpost includes projects that are still drafts (haven't been submitted) and submissions hidden on Devpost ("Submitted (Hidden)"), but Jury automatically ignores both when importing the CSV.
 :::
