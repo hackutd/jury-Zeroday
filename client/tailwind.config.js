@@ -22,6 +22,7 @@ export default {
             // Prize ranking screens (same hot pink as error, named so it isn't read as an error)
             prize: '#EA609C',
             prizeDark: '#C63A77',
+            prizeBackground: '#E8F7FF',
         },
         fontFamily: {
             text: ['Rubik', 'Franklin Gothic Medium', 'Arial Narrow', 'Arial', 'sans-serif'],

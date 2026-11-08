@@ -125,7 +125,7 @@ const JudgePrizeRanking = () => {
 
     // Light blue page background so the prize screen can't be mistaken for the general ranking
     return (
-        <div className="flex flex-col grow bg-primaryLight">
+        <div className="flex flex-col grow bg-prizeBackground">
             <Helmet>
                 <title>Prize Ranking | Jury</title>
             </Helmet>
