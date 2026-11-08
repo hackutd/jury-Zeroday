@@ -132,7 +132,7 @@ const JudgePrizeRanking = () => {
             <Container noCenter className="px-2 pb-4">
                 <Back location="/judge" />
                 <h1 className="text-2xl mt-2">
-                    Prize Ranking: <span className="font-bold text-primary">{prizeTitle}</span>
+                    Prize Ranking: <span className="font-bold text-prize">{prizeTitle}</span>
                 </h1>
                 <p className="text-light text-sm">
                     This is separate from your general ranking. Only the projects you&apos;ve seen
@@ -145,7 +145,8 @@ const JudgePrizeRanking = () => {
                     </p>
                 )}
                 <div className="w-full mb-2 mt-4">
-                    <Button type="primary" full disabled={notRanked} onClick={next}>
+                    {/* The 'error' style is the hot pink used for prize screens (grey while disabled) */}
+                    <Button type="error" full disabled={notRanked} onClick={next}>
                         {nextLabel}
                     </Button>
                 </div>

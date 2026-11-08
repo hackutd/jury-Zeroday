@@ -201,7 +201,7 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
                     Deliberation has started. You cannot change rankings.
                 </p>
             )}
-            <h2 className="text-primary text-xl font-bold mt-4">
+            <h2 className={`${prize ? 'text-prize' : 'text-primary'} text-xl font-bold mt-4`}>
                 {prize ? `Ranked Projects for ${prize.prize}` : 'General Ranking'}
             </h2>
             <p className="text-light text-sm">
@@ -217,7 +217,7 @@ const Ranking = ({ judge, deliberation, prize, onSave }: RankingProps) => {
                 disabled={disabled || deliberation}
             />
 
-            <h2 className="text-primary text-xl font-bold mt-4">
+            <h2 className={`${prize ? 'text-prize' : 'text-primary'} text-xl font-bold mt-4`}>
                 {prize ? `Unranked Projects for ${prize.prize}` : 'Unranked Projects'}
             </h2>
             <p className="text-light text-sm">
