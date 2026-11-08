@@ -128,29 +128,6 @@ const Judge = () => {
                     <StatBlock name="Total Projects" value={projCount} />
                 </div>
                 <Ranking judge={judge} deliberation={deliberation} />
-                {prizes.length > 0 && (
-                    <>
-                        <h2 className="text-prize text-xl font-bold mt-6">
-                            Prize Rankings{' '}
-                            <span className="text-light text-sm font-normal">
-                                (tap a prize to re-rank its projects)
-                            </span>
-                        </h2>
-                        <div className="h-[1px] w-full bg-light my-2"></div>
-                        <div className="flex flex-wrap gap-2">
-                            {prizes.map((p) => (
-                                <Button
-                                    key={p.prize}
-                                    type="outline-primary"
-                                    className="text-lg border-prize text-prize hover:text-prize hover:bg-prize/20"
-                                    onClick={() => navigate(prizeQueueUrl([p.prize]))}
-                                >
-                                    {p.prize} ({p.project_ids.length})
-                                </Button>
-                            ))}
-                        </div>
-                    </>
-                )}
             </Container>
         </>
     );
