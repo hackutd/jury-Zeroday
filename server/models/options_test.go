@@ -19,3 +19,18 @@ func TestRankedPrizesSkipsBestBeginner(t *testing.T) {
 		t.Fatalf("FindPrize(best design) = %q, %v", prize, ok)
 	}
 }
+
+func TestRankedPrizesSkipsNone(t *testing.T) {
+	o := NewOptions()
+	o.PrizeRankings = []string{"Best Design", "None", " none ", "Virality"}
+
+	if got := o.RankedPrizes(); !slices.Equal(got, []string{"Best Design", "Virality"}) {
+		t.Fatalf("RankedPrizes should leave out None, got %v", got)
+	}
+	if _, ok := o.FindPrize("None"); ok {
+		t.Fatalf("None should not be rankable")
+	}
+	if IsNoHackUTDTrack("None of the above") {
+		t.Fatalf("only the exact answer None means no track")
+	}
+}

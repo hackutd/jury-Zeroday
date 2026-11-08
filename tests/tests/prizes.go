@@ -49,12 +49,14 @@ func getPrizeScores(context *util.Context) (map[string]map[string]int64, util.Re
 
 // devpostTrackCSV is a small Devpost export with HackUTD's "What Hack Utd Track" custom question.
 // "Prize None" has Best Design in its Opt-In Prizes but no track, and must not be ranked for it.
+// "Prize Opted Out" answered "None" (no HackUTD track), which is never listed or ranked.
 const devpostTrackCSV = `Project Title,Submission Url,Project Status,Judging Status,Highest Step Completed,Project Created At,Project Submitted At,Submission Last Submitted At,About The Project,"""Try it out"" Links",Video Demo Link,Image Gallery URLs,Attached File S3 Key,Opt-In Prizes,Built With,What Hack Utd Track Would You Like To Apply To? (You Will Automatically Be Considered For General)
 Prize Design,https://devpost.com/1,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Design
 Prize Design 2,https://devpost.com/2,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,best design
 Prize AI,https://devpost.com/3,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best AI
 Prize None,https://devpost.com/4,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,Best Design,go,
-Prize Hardware,https://devpost.com/5,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Hardware`
+Prize Hardware,https://devpost.com/5,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,Best Hardware
+Prize Opted Out,https://devpost.com/6,Submitted (Gallery/Visible),Pending,Submit,,,,About,,,,,,go,None`
 
 // PrizeRankingsEndToEnd verifies that every judge can rank the projects they saw for each prize in
 // the settings (only the projects whose HackUTD track is that prize, not Opt-In Prizes), that bad
@@ -69,9 +71,9 @@ func PrizeRankingsEndToEnd(context *util.Context) util.Result {
 	defer util.PostRequest(context.Logger, "/admin/prize-rankings", util.H{"prize_rankings": []string{}}, util.AdminAuth())
 
 	// Names are trimmed, blanks dropped, duplicates (ignoring case) removed and Best Beginner (filter only,
-	// never ranked) dropped
+	// never ranked) and None (no HackUTD track) dropped
 	setRes := util.PostRequest(context.Logger, "/admin/prize-rankings", util.H{
-		"prize_rankings": []string{"Best Design", "best design", " Best AI ", "", "Best Beginner Hack"},
+		"prize_rankings": []string{"Best Design", "best design", " Best AI ", "", "Best Beginner Hack", "None"},
 	}, util.AdminAuth())
 	if !util.IsOk(setRes) {
 		return util.NewResult(false, "Failed to set prize rankings: "+setRes)
@@ -97,7 +99,7 @@ func PrizeRankingsEndToEnd(context *util.Context) util.Result {
 	}
 	design, design2, ai, none := ids[0], ids[1], ids[2], ids[3]
 
-	// The HackUTD track answers are listed exactly as typed in Devpost
+	// The HackUTD track answers are listed exactly as typed in Devpost, without None
 	var tracks []string
 	if err := json.Unmarshal([]byte(util.GetRequest(context.Logger, "/admin/hackutd-tracks", util.AdminAuth())), &tracks); err != nil {
 		return util.NewResult(false, "Could not parse HackUTD tracks: "+err.Error())

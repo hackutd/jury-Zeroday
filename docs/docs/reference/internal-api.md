@@ -781,7 +781,7 @@ Update the list of tracks
 
 ### GET /admin/hackutd-tracks
 
-Lists every distinct answer to the Devpost question "What Hack Utd Track Would You Like To Apply To?" from the imported projects, exactly as typed in Devpost, sorted, without blanks.
+Lists every distinct answer to the Devpost question "What Hack Utd Track Would You Like To Apply To?" from the imported projects, exactly as typed in Devpost, sorted, without blanks or "None" (no track).
 
 -   **Auth**: admin
 -   **Response**: JSON

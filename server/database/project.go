@@ -309,7 +309,8 @@ func GetChallenges(db *mongo.Database, ctx context.Context) ([]string, error) {
 }
 
 // GetHackUTDTracks gets every distinct HackUTD track answer (the Devpost "What Hack Utd Track"
-// question) from the projects, exactly as typed in Devpost, sorted, without blanks
+// question) from the projects, exactly as typed in Devpost, sorted, without blanks or "None"
+// (no track, see models.IsNoHackUTDTrack)
 func GetHackUTDTracks(db *mongo.Database, ctx context.Context) ([]string, error) {
 	// Get all projects
 	projects, err := FindAllProjects(db, ctx)
@@ -322,7 +323,7 @@ func GetHackUTDTracks(db *mongo.Database, ctx context.Context) ([]string, error)
 	tracks := make([]string, 0)
 	for _, project := range projects {
 		track := strings.TrimSpace(project.HackUTDTrack)
-		if track != "" && !seen[track] {
+		if track != "" && !models.IsNoHackUTDTrack(track) && !seen[track] {
 			seen[track] = true
 			tracks = append(tracks, track)
 		}

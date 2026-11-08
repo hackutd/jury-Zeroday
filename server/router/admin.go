@@ -941,7 +941,8 @@ func SetTracks(ctx *gin.Context) {
 // POST /admin/prize-rankings - SetPrizeRankings sets the prizes every judge also ranks for, matched
 // against each project's HackUTD track (the Devpost "What Hack Utd Track" answer).
 // Names are trimmed, blanks dropped and duplicates (ignoring case) removed. Best Beginner is
-// dropped because it is a hardcoded filter that judges never rank for (models.IsFilterOnlyPrize).
+// dropped because it is a hardcoded filter that judges never rank for (models.IsFilterOnlyPrize),
+// and "None" because it means the team applied to no HackUTD track (models.IsNoHackUTDTrack).
 func SetPrizeRankings(ctx *gin.Context) {
 	// Get the state from the context
 	state := GetState(ctx)
@@ -964,7 +965,7 @@ func SetPrizeRankings(ctx *gin.Context) {
 	prizes := make([]string, 0, len(*req.PrizeRankings))
 	for _, prize := range *req.PrizeRankings {
 		prize = strings.TrimSpace(prize)
-		if prize != "" && !models.IsFilterOnlyPrize(prize) && !util.ContainsFold(prizes, prize) {
+		if prize != "" && !models.IsFilterOnlyPrize(prize) && !models.IsNoHackUTDTrack(prize) && !util.ContainsFold(prizes, prize) {
 			prizes = append(prizes, prize)
 		}
 	}
